@@ -213,19 +213,21 @@ class AM4_batch_scripter(object):
                  'srun':{'exec':'srun', 'ntasks':'--ntasks=', 'cpu_per_task':'--cpus-per-task='}}
     #
     HPC_configs={
-    'mazama_hpc':{'cpu_per_node':24, 'cpu_slots':2, 'cpu_make':'intel', 'cpu_gen':'haswell',
+    'mazama_hpc':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'intel', 'cpu_gen':'haswell',
                   'mem_per_node':64, 'modules':['intel/19', 'openmpi_3/', 'gfdl_am4/']},
-    'sherlock2_hpc':{'cpu_per_node':24, 'cpu_slots':2, 'cpu_make':'intel', 'cpu_gen':'skylake',
+    'sherlock2_hpc':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'intel', 'cpu_gen':'skylake',
                      'mem_per_node':192},
-    'sherlock2_hpc2':{'cpu_per_node':24, 'cpu_slots':2, 'cpu_make':'intel', 'cpu_gen':'skylake',
+    'sherlock2_hpc2':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'intel', 'cpu_gen':'skylake',
                       'mem_per_node':384},
-    'sherlock3_base':{'cpu_per_node':24, 'cpu_slots':1, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7502',
+    'sherlock3_base':{'cpus_per_node':24, 'cpu_slots':1, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7502',
                       'mem_per_node':256},
-    'sherlock3_perf':{'cpu_per_node':128, 'cpu_slots':2, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7742',
-                      'mem_per_node':1024}
+    'sherlock3_perf':{'cpus_per_node':128, 'cpu_slots':2, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7742',
+                      'mem_per_node':1024},
+    'unknown':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'unknown', 'cpu_gen':'unknown',
+                  'mem_per_node':64}
     }
     #
-    def __init__(self, batch_out='am4_batch.sh', work_dir=None, mpi_exec='mpirun',
+    def __init__(self, batch_out=None, work_dir=None, mpi_exec='mpirun',
                  input_data_path=None, input_data_tar=None, input_data_url=None,
                  nml_template='nml_input_template.nml', modules=None, diag_table_src='diag_table_v101',
                  force_copy_input=0, do_tar=0, hpc_config='mazama_hpc',
@@ -286,6 +288,8 @@ class AM4_batch_scripter(object):
         input_data_tar = (input_data_tar or os.path.join(os.path.dirname(input_data_path), 'AM4_run.tar.gz') )
         if work_dir is None:
             work_dir = os.path.join(cwd, 'workdir')
+        if batch_out is None:
+            batch_out = os.path.join(work_dir, 'am4_batch.sh')
         #
         input_data_url = input_data_url or 'ftp://nomads.gfdl.noaa.gov/users/Ming.Zhao/AM4Documentation/GFDL-AM4.0/inputData/AM4_run.tar.gz'
         # TODO: also download check validations:
@@ -371,7 +375,7 @@ class AM4_batch_scripter(object):
 #                'ocean_model_nml':{'layout':self.layout_1, 'io_layout':self.layout_io_1},
 #                }
         return {'coupler_nml':{'atmos_npes':self.npes_atmos, 'atmos_nthreads':self.nthreads_atmos,
-                              'ocean_npes':self.npes_ocean},
+                              'ocean_npes':self.npes_ocean, 'ncores_per_node':self.hpc_config['cpus_per_node']},
                'fv_core_nml':{'layout':'{},{}'.format(*self.layout_2),
                               'io_layout':'{},{}'.format(*self.layout_io_2)},
                'ice_model_nml':{'layout':'{},{}'.format(*self.layout_1),
@@ -542,7 +546,8 @@ class AM4_batch_scripter(object):
         #  focus on a SE3 Mazama build/configuration.
         '''
         #
-        fname_out = fname_out or os.path.join(self.work_dir, self.batch_out)
+        #fname_out = fname_out or os.path.join(self.work_dir, self.batch_out)
+        fname_out = fname_out or self.batch_out
         chdir = chdir or self.work_dir
         output_out = output_out or 'AM4_out_%j.out'
         output_err = output_err or 'AM4_out_%j.err'
