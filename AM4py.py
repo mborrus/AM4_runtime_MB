@@ -83,11 +83,16 @@ class NML(dict):
                 if len(rw)==0 or rw[0] in ['!', '\n']:
                     continue
                 #
+                if rw[0]=='/':
+                    # end of section
+                    if not group_name.strip() == '':
+                        self[group_name] = values_out
+                #
                 if rw[0]=='&':
                     # new group:
-                    if not group_name == '':
-                        self[group_name] = values_out
-                        #nml_dict[group_name]=values_out
+                    #if not group_name == '':
+                    #    self[group_name] = values_out
+                    #    #nml_dict[group_name]=values_out
                     #
                     group_name = rw[1:].strip()
                     values_out = {}
@@ -111,7 +116,8 @@ class NML(dict):
                 ky_vl = rw.split('=')
                 if len(ky_vl) == 1:
                     #print('*** debug: ', val, ky_vl)
-                    val = val + ky_vl[0]
+                    #val = val + ky_vl[0]
+                    val = '{}\n{}'.format(val, rw)
                     continue
                 elif len(ky_vl) == 2:
                     if not ky=='':
@@ -170,6 +176,8 @@ class NML(dict):
                 fout.write('&{}\n'.format(group))
                 #
                 for entry,val in entries.items():
+                    if entry.strip() == '':
+                        continue
                     fout.write('{}{} = {}\n'.format(indent, entry, val ))
                 fout.write('/\n\n')
                 
@@ -209,7 +217,7 @@ class NML_from_json(NML):
 #
 #
 class AM4_batch_scripter(object):
-    mpi_execs = {'mpirun':{'exec': 'mpirun', 'ntasks':'--np ', 'cpu_per_task':'-d '},
+    mpi_execs = {'mpirun':{'exec': 'mpirun', 'ntasks':'-np ', 'cpu_per_task':'--cpus-per-proc '},
                  'srun':{'exec':'srun', 'ntasks':'--ntasks=', 'cpu_per_task':'--cpus-per-task='}}
     #
     HPC_configs={
@@ -229,10 +237,11 @@ class AM4_batch_scripter(object):
     #
     def __init__(self, batch_out=None, work_dir=None, mpi_exec='mpirun',
                  input_data_path=None, input_data_tar=None, input_data_url=None,
-                 nml_template='nml_input_template.nml', modules=None, diag_table_src='diag_table_v101',
+                 nml_template='nml_input_template.nml', modules=None,
+                diag_table_src='diag_table_v101', field_table_src='field_table_v101', data_table_src='data_table_v101',
                  force_copy_input=0, do_tar=0, hpc_config='mazama_hpc',
                  npes_atmos=48, nthreads_atmos=1, npes_ocean=0, job_name='AM4_run', sbatch_options_str='',
-                 copy_timeout=6000):
+                 copy_timeout=6000, verbse=0):
         '''
         # parameters? input data file?
         #
@@ -341,7 +350,6 @@ class AM4_batch_scripter(object):
         #
         # write a batch file:
         # self.write_batch_script()
-        
     #
     # NOTE: these nvcpu calculators will likely not work well for not-simple configurations,
     #. but again, I think most of these jobs will be single-threaded.
@@ -387,8 +395,58 @@ class AM4_batch_scripter(object):
                 'atmos_model_nml':{'nxblocks':1, 'nyblocks':self.nthreads_atmos}
                }
     #
+    def get_empty_workdir(self, work_dir=None, diag_table_src=None, field_table_src=None, data_table_src=None,
+            force_copy=0, verbose=None):
+        '''
+        # TODO: How do we do restarts, run with different resolution configs, etc.?
+        # start here by building a bare bones work_dir, with just the basic input files and an empty INPUT.
+        # we will work a little later to tune the workflows for default start, blank start, and restarts.
+        #
+        # Inputs:
+        # @work_dir: working directory (files will be copied to this path; sim will be run in this path.
+        # @diag_table_src, field_table_src, data_table_src: source files for {those}_src input files. By default,
+        #   we'll keep local copies like field_table_v101.
+        # @force_copy: boolean to force copying/over-writing datta_table, field_table, diag_table, and maybe input.nml
+        #   Nominally, we maybe have to rewrite input.nml every time anyway -- at least in priciple, even if only to reproduce
+        #  it 1:1. We'll be working out those workflows as we go...
+        #  *** !!! ***
+        #  NOTE: For now, let's ignore input.nml here; we'll just keep that as a separate process (for now anyway).
+        '''
+        #
+        # TODO: consider NOT allowing a local workdir by using the None-like syntax,
+        #  work_dir = work_dir or self.work_dir
+        #  which will trigger on None or empty (last time I checked anyway).
+        if work_dir is None:
+            work_dir = self.work_dir
+        #
+        verbose = verbose or self.verbose
+        verbose = verbose or False
+        #
+        if diag_table_src is None:
+            diag_table_src = self.diag_table_src
+        if field_table_src is None:
+            field_table_src = self.field_table_src
+        if data_table_src is None:
+            data_table_src = self.data_table_src
+        #
+        for pth in ('INPUT', 'RESTART'):
+            if not os.path.isdir(os.path.join(work_dir, pth)):
+                os.makedirs(os.path.join(work_dir, pth))
+        #
+        #diag_path = os.path.join(work_dir, 'diag_table')
+        #if not os.path.isfile(diag_path) or force_copy:
+        #    shutil.copy(diag_table_src, os.path.join(work_dir, 'diag_table'))
+        #
+        for src,dst in [(field_table_src, 'field_table'), (data_table_src, 'data_table'), (diag_table_src, 'diag_table')]:
+            pth_dst = os.path.join(work_dir, dst)
+            if not os.path.isfile(pth_dst) or force_copy:
+                shutil.copy(src, pth_dst)
+                if verbose:
+                    print('*** VERBOSE: Created input file: {} from source: {}'.format(pth_dst, src))
+        
+        
     def get_input_data(self, work_dir=None, input_dir=None, input_tar=None, input_data_url=None,
-                       force_copy=None, verbose=0, copy_timeout=None, diag_table_src=None):
+                       force_copy=None, verbose=None, copy_timeout=None, diag_table_src=None):
         if work_dir is None:
             work_dir = self.work_dir
         force_copy = force_copy or self.force_copy_input
@@ -397,6 +455,10 @@ class AM4_batch_scripter(object):
         input_data_url = input_data_url or self.input_data_url
         copy_timeout = copy_timeout or self.copy_timeout
         diag_table_src = diag_table_src or self.diag_table_src
+        if verbose is None:
+            verbose = self.verbose
+        if verbose is None:
+            verbose = False
         #
         # root-dir for tar file:
         if not os.path.isdir(os.path.dirname(input_tar)):
@@ -453,13 +515,13 @@ class AM4_batch_scripter(object):
             # TODO: The Python copy options just don't seem to work very well (maybe there's a recursive option command or
             #. something to tell it we're copying a directory?). Let's just use a shell command.
             #shutil.copy2(input_dir, work_dir)
-            cp_command = 'cp -rf {}/ {}/'.format(input_dir, work_dir)
+            cp_command = 'cp -rf {}/* {}/'.format(input_dir, work_dir)
             try:
                 # NOTE: beware the timeout.... I think the default timeout is 60 seconds or something;
                 #. this can take a while, so I've been using 6000 seconds as a default.
                 #sp_output = subprocess.run(cp_command.split(chr(32)), check=True,
                 #           stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                sp_output = subprocess.run(cp_command.split(chr(32)), check=True,
+                sp_output = subprocess.run(cp_command, shell=True, check=True,
                            capture_output=True, timeout=copy_timeout)
             except:
                 #print('*** copy error: stdout: {}, sterr: {}'.format(sp_output.stdout, sp_output=stderr) )
@@ -471,7 +533,7 @@ class AM4_batch_scripter(object):
             #
             # copy diag_table from a source file. We're going to construct an input.nml separately.
             # NOTE: Again, might be better to do this as a shell command, for a number of reasons.
-            shutil.copy(diag_table_src, os.path.append(work_dir, 'diag_table'))
+            shutil.copy(diag_table_src, os.path.join(work_dir, 'diag_table'))
             #
         if not os.path.isdir(os.path.join(work_dir, 'RESTART')):
             os.makedirs(os.path.join(work_dir, 'RESTART'))
@@ -490,14 +552,13 @@ class AM4_batch_scripter(object):
         nml_configs = [self.default_nml_reconfig] + list(nml_configs)
         nml_template = nml_template or self.nml_template
         
-        #
+        # determine the correct NML_from{} function, "f_handler":
         if nml_template.endswith('.nml'):
             f_handler = NML_from_nml
             #NML = NML_from_nml(nml_template, output=None)
         elif nml_template.endswith('.json'):
             #NML = NML_from_json(nml_template, output=None)
             f_handler = NML_from_json
-            
         else:
             # guess?
             # TODO: crack it open and look for .nml or
@@ -510,9 +571,7 @@ class AM4_batch_scripter(object):
                         f_handler = NML_from_nml
                         break
                     #
-                #
         NML = f_handler(nml_template, None)
-            #
         #
         for config in nml_configs:
             #
@@ -576,6 +635,8 @@ class AM4_batch_scripter(object):
             fout.write('#\n#\n')
             # Universal??? My guess is we can impprove performance by increasing these values on bigger
             #. memory machines.
+            # not sure about OMP_THREADS really, but it's worth a shot...
+            fout.write('export OMP_THREADS=1\n\n')
             # these probably need to be parameterized somehow, or included in a template... or otherwise
             #. we need to figure out what they should be. I just copied them from GFDL sample scripts.
             fout.write('export KMP_STACKSIZE=512m\n')
@@ -588,17 +649,27 @@ class AM4_batch_scripter(object):
             # We can probably make this part pretty universal as well...
             fout.write('#\nulimit -s unlimited\n#\n')
             fout.write('#\ncd {}\n#\n'.format(self.work_dir))
-            fout.write('MPI_COMMAND={} {}{} {}{} ${{EXECUTABLE}}\n#\n'.format(mpi_exec['exec'],
-                                                            mpi_exec['ntasks'], self.n_tasks,
-                                                            mpi_exec['cpu_per_task'], self.n_threads))
             #
+            # NOTE: I don't think we can use threads anyway, so let's just not allow it here.
+            #  we'll probaly need to go back and force it to 1 above as well.
+#            fout.write('MPI_COMMAND=\"{} {}{} {}{} ${{EXECUTABLE}}\"\n#\n'.format(mpi_exec['exec'],
+#                                                            mpi_exec['ntasks'], self.n_tasks,
+#                                                            mpi_exec['cpu_per_task'], self.n_threads))
+            fout.write('MPI_COMMAND=\"{} {}{} ${{EXECUTABLE}}\"\n#\n'.format(mpi_exec['exec'],
+                                                            mpi_exec['ntasks'], self.n_tasks)
+                                                            )
+
+            fout.write('echo ${MPI_COMMAND}\n')
+            #
+            fout.write('${MPI_COMMAND}\n\n')
             # add an error-check:
-            for ln in ['if [[ %? -ne 0 ]]; then', 'echo "ERROR: Run failed." 1>&2',
+            for ln in ['if [[ $? -ne 0 ]]; then', 'echo "ERROR: Run failed." 1>&2',
                        '"ERROR: Output from run in {}/fms.out ... or maybe in a log file" 1>&2'.format(self.work_dir),
                        'exit 1', 'fi' ]:
                 fout.write('{}\n'.format(ln))
             #
         #
+        xx = subprocess.run('chmod 755 {}'.format(fname_out).split(), check=True, capture_output=True)
     #
 #
 def get_AM4_layouts(n_tasks=24):
