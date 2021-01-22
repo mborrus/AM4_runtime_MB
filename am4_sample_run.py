@@ -17,7 +17,7 @@ if __name__ == '__main__':
     #
     print('*** ABS variables:')
     for key,val in ABS.__dict__.items():
-    print('{}: {}'.format(key,val))
+        print('{}: {}'.format(key,val))
     #
     zz = ABS.get_input_data(verbose=True)
     #
@@ -35,4 +35,4 @@ if __name__ == '__main__':
     #
     ABS.write_batch_script()
     #
-    #sbatch_output = subprocess.run('sbatch {}'.format(ABS.batch_out), check=True, capture_output=True )
+    #   sbatch_output = subprocess.run('sbatch {}'.format(ABS.batch_out), check=True, capture_output=True )
