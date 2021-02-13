@@ -240,7 +240,8 @@ class AM4_batch_scripter(object):
                  nml_template='nml_input_template.nml', modules=None,
                 diag_table_src='diag_table_v101', field_table_src='field_table_v101', data_table_src='data_table_v101',
                  force_copy_input=0, do_tar=0, hpc_config='mazama_hpc',
-                 npes_atmos=48, nthreads_atmos=1, npes_ocean=0, job_name='AM4_run', sbatch_options_str='',
+                 npes_atmos=48, nthreads_atmos=1, npes_ocean=0, job_name='AM4_run', sbatch_options_str='', current_date='1979,1,1,0,0,0',
+                 slurm_partition=None, slurm_time=None,
                  copy_timeout=6000, verbse=0):
         '''
         # parameters? input data file?
@@ -383,7 +384,8 @@ class AM4_batch_scripter(object):
 #                'ocean_model_nml':{'layout':self.layout_1, 'io_layout':self.layout_io_1},
 #                }
         return {'coupler_nml':{'atmos_npes':self.npes_atmos, 'atmos_nthreads':self.nthreads_atmos,
-                              'ocean_npes':self.npes_ocean, 'ncores_per_node':self.hpc_config['cpus_per_node']},
+                              'ocean_npes':self.npes_ocean, 'ncores_per_node':self.hpc_config['cpus_per_node'],
+                              'current_date':self.current_date},
                'fv_core_nml':{'layout':'{},{}'.format(*self.layout_2),
                               'io_layout':'{},{}'.format(*self.layout_io_2)},
                'ice_model_nml':{'layout':'{},{}'.format(*self.layout_1),
@@ -401,6 +403,9 @@ class AM4_batch_scripter(object):
         # TODO: How do we do restarts, run with different resolution configs, etc.?
         # start here by building a bare bones work_dir, with just the basic input files and an empty INPUT.
         # we will work a little later to tune the workflows for default start, blank start, and restarts.
+        # TODO: maybe go through known defaults or templates to create empty input files? INPUT/MOM_input can (I think)
+        #  be just a blank file, but some of the others are .nc files, and presumably require structure. We do have a NetCDF
+        #  format copier someplace (dycore maybe?).
         #
         # Inputs:
         # @work_dir: working directory (files will be copied to this path; sim will be run in this path.
@@ -444,7 +449,46 @@ class AM4_batch_scripter(object):
                 if verbose:
                     print('*** VERBOSE: Created input file: {} from source: {}'.format(pth_dst, src))
         
-        
+    def get_restart_current_date(self, work_dir=None, default_restart_date=None):
+        '''
+        # get current_date value for restart from RESTART/coupler.res
+        # TODO: allow better granualarity than just work_day? apply some logic to allow full path to coupler.res, but
+        #  smart enough to take just work_dir? ??
+        '''
+        if work_dir is None:
+            work_dir = self.work_dir
+        default_restart_date = default_restart_date or self.current_date
+        #
+        # default value:
+        #restart_date = '1979,1,1,0,0,0'
+        if os.path.isfile(os.path.join(work_dir, 'RESTART', 'coupler.res')):
+            coupler_path = os.path.join(work_dir, 'RESTART', 'coupler.res')
+        elif os.path.isfile(os.path.join(work_dir, 'INPUT', 'coupler.res')):
+            coupler_path = os.path.join(work_dir, 'INPUT', 'coupler.res')
+        else:
+            print('*** WARNING: coupler_path not available in RESTART or INPUT.  Using default value, {}'.format(default_restart_date))
+            #print('*** ERROR: No coupler_path. Use default value, {}'.format(default_current_date))
+            return default_restart_date
+            
+        #
+        #if not os.path.isfile(coupler_path):
+        #    print('ERROR: no coupler_path')
+        #    return restart_date
+        #
+        with open(coupler_path, 'r') as fin:
+            cal_type = fin.readline().split()[0]
+            for rw in fin:
+                if rw.startswith('\n'):
+                    continue
+                #
+                # ... and keep going! we want the last date. we could also just iterate to EOF and then just read the last line.
+                # TODO: unindent this line to do the above?... spin through all rows, then process the last one. this assumes
+                #  this file only contains dates.
+                restart_date = ','.join(rw.split()[0:6])
+            #
+        #
+        return restart_date
+        #
     def get_input_data(self, work_dir=None, input_dir=None, input_tar=None, input_data_url=None,
                        force_copy=None, verbose=None, copy_timeout=None, diag_table_src=None):
         if work_dir is None:
@@ -509,7 +553,13 @@ class AM4_batch_scripter(object):
             # Nuke existing workdir? for now, let's not...
             # TODO: shutil.copy2() should work for this, but it's being tempermental, maybe about the
             #. directory. So for now, let's just subprocess the shell command and revisit later. It could
-            #. be a versioing problem (subprocess and related libraries are pretty version squirrelie).
+            #. be a versioing problem (subprocess and related libraries are pretty version twitchy).
+            # TODO: consider using os.walk() to do this; it will be something like (but syntax details TBD):
+            #  for root, dirs, files in os.walk(src, topdown=True/False):
+            #        for fn in files:
+            #            shutil.copy(join(root,fn), dest_path )
+            # or maybe use shutil.copytree()
+            #
             #src = input_dir
             #dst = work_dir
             # TODO: The Python copy options just don't seem to work very well (maybe there's a recursive option command or
@@ -596,7 +646,7 @@ class AM4_batch_scripter(object):
         return NML
     #
     def write_batch_script(self, fname_out=None, chdir=None, output_out=None, output_err=None,
-                           mpi_exec=None):
+                           mpi_exec=None, slurm_partition=None, slurm_time=None):
         '''
         # Just as it sounds; write an AM4 batch script. use various inputs (prams, json, dicts?);
         #. fetch, untar, copy input data as necessary, etc.
@@ -611,6 +661,8 @@ class AM4_batch_scripter(object):
         output_out = output_out or 'AM4_out_%j.out'
         output_err = output_err or 'AM4_out_%j.err'
         mpi_exec = mpi_exec or self.mpi_exec
+        slurm_partition = slurm_partition or self.slurm_partition
+        slurm_time = slurm_time or self.slurm_time
         #
         with open(fname_out, 'w') as fout:
             # This section should be pretty universal:
@@ -624,6 +676,11 @@ class AM4_batch_scripter(object):
             fout.write('#SBATCH --chdir={}\n'.format(chdir) )
             fout.write('#SBATCH --output={}\n'.format(output_out))
             fout.write('#SBATCH --error={}\n'.format(output_err))
+            #
+            if not slurm_partition is None:
+                fout.write('#SBATCH --partition={}\n'.format(slurm_partition))
+            if not slurm_time is None:
+                fout.write('#SBATCH --time={}\n'.format(slurm_time))
             #
             # Module swill be platform dependent. We could handle this section with JSON
             #. if we wanted to.
