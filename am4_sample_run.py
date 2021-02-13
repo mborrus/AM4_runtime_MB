@@ -11,6 +11,7 @@ if __name__ == '__main__':
     pth_restart = os.path.join(work_dir, 'RESTART')
     pth_input   = os.path.join(work_dir, 'INPUT')
     #
+    is_restart=False
     job_name = 'AM4_dev'
     slurm_partition='cees'
     batch_job_name = os.path.join(work_dir, 'AM4_batch_example.bs')
@@ -59,6 +60,9 @@ if __name__ == '__main__':
     #
     # TODO: Do we need to crack open a .res (coupler.res maybe?) file to read the current date? How do restarts work?
     my_configs = {'coupler_nml':{'days':runtime_days, 'months':runtime_months, 'current_date':ABS.get_restart_current_date()}, 'fv_core_nml':{'npx':97, 'npy':97, 'npz':33}}
+    if is_restart:
+        my_configs['fv_core_nml']['adjust_dry_mass'] = '.false.'
+    #
     print('*** NML configs: {}'.format(my_configs))
     my_nml = ABS.make_NML(nml_template='input_yoder_v101.nml', nml_configs=[my_configs],
                       nml_out=os.path.join(ABS.work_dir, 'input.nml') )
