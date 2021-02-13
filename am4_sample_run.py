@@ -23,7 +23,13 @@ if __name__ == '__main__':
     #
     zz = ABS.get_input_data(verbose=True)
     #
+    # NOTE: To do a restart:
+    #  move all RESTART files to INPUT
+    #  update the start date of the simulation (in nml)
+    #  set: fv_core_nml
+    #            adjust_dry_mass = .false.
     my_configs = {'coupler_nml':{'days':15, 'months':0}, 'fv_core_nml':{'npx':97, 'npy':97, 'npz':33}}
+    #
     my_nml = ABS.make_NML(nml_template='input_yoder_v101.nml', nml_configs=[my_configs],
                       nml_out=os.path.join(ABS.work_dir, 'input.nml') )
     # NML_from_nml('input_yoder_v101.nml')
