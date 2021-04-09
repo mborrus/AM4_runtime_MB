@@ -3,11 +3,13 @@ import os
 import AM4py
 import subprocess
 import shutil
-
+# TODO:
+#  1) move action to a "do it" function
+#  2) handle parameters.
 if __name__ == '__main__':
     #
     input_data_path = os.path.join(os.environ['SCRATCH'], 'AM4', 'AM4_data3', 'AM4_run')
-    work_dir = os.path.join(os.environ['SCRATCH'], 'AM4', 'workdir3')
+    work_dir = os.path.join(os.environ['SCRATCH'], 'AM4', 'workdir')
     pth_restart = os.path.join(work_dir, 'RESTART')
     pth_input   = os.path.join(work_dir, 'INPUT')
     #
@@ -17,6 +19,7 @@ if __name__ == '__main__':
     batch_job_name = os.path.join(work_dir, 'AM4_batch_example.bs')
     n_cpu_atmos = 96
     copy_timeout = 6000
+    nml_template='input_yoder_v101.nml'
     #restart_date_dtm = dtm.datetime(1979,1,1,0,0,0)
     #
     # TODO: How do we count days? We might need to specify the start and end dates, or start date and a total
@@ -38,7 +41,7 @@ if __name__ == '__main__':
     #  the elapsed time (in fractional days) for that sub-run.
     #
     ABS = AM4py.AM4_batch_scripter(input_data_path=input_data_path, work_dir=work_dir, npes_atmos=n_cpu_atmos,
-                               job_name='AM4_dev', batch_out=batch_job_name, slurm_partition=slurm_partition,
+                               job_name=job_name, batch_out=batch_job_name, slurm_partition=slurm_partition,
                                 verbse=True )
     #
     restart_date = ABS.get_restart_current_date()
@@ -64,7 +67,7 @@ if __name__ == '__main__':
         my_configs['fv_core_nml']['adjust_dry_mass'] = '.false.'
     #
     print('*** NML configs: {}'.format(my_configs))
-    my_nml = ABS.make_NML(nml_template='input_yoder_v101.nml', nml_configs=[my_configs],
+    my_nml = ABS.make_NML(nml_template=nml_template, nml_configs=[my_configs],
                       nml_out=os.path.join(ABS.work_dir, 'input.nml') )
     #
     # just in case... there area  number of places where we can accidentally remove this path, which the Sim apparently cannot
@@ -90,6 +93,5 @@ if __name__ == '__main__':
     print('** batch_out: ', ABS.batch_out)
     #
     ABS.write_batch_script()
-    
     #
     sbatch_output = subprocess.run('sbatch {}'.format(ABS.batch_out), shell=True, check=True, capture_output=True )

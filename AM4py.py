@@ -20,7 +20,9 @@ import contextlib
 import re
 #
 import json
-import netCDF4
+#
+# we'll probably need this eventually, but maybe we can try to make it optional, if it's going to be a problem...
+#import netCDF4
 #
 #
 class NML(dict):
@@ -224,13 +226,15 @@ class AM4_batch_scripter(object):
     'mazama_hpc':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'intel', 'cpu_gen':'haswell',
                   'mem_per_node':64, 'modules':['intel/19', 'openmpi_3/', 'gfdl_am4/']},
     'sherlock2_hpc':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'intel', 'cpu_gen':'skylake',
-                     'mem_per_node':192},
+                     'mem_per_node':192, 'slurm_constraint':'CPU_GEN:SKX'},
     'sherlock2_hpc2':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'intel', 'cpu_gen':'skylake',
-                      'mem_per_node':384},
-    'sherlock3_base':{'cpus_per_node':24, 'cpu_slots':1, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7502',
-                      'mem_per_node':256},
+                      'mem_per_node':384, 'slurm_constraint':'CPU_GEN:SKX'},
+    'sherlock3_base':{'cpus_per_node':32, 'cpu_slots':1, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7502',
+                      'mem_per_node':256, 'slurm_constraint':'CLASS:SH3_CBASE', 'modules':['am4/singularity_gfdl/2021.1.0']},
+    'sherlock3_base_singularity':{'cpus_per_node':32, 'cpu_slots':1, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7502',
+                      'mem_per_node':256, 'slurm_constraint':'CLASS:SH3_CBASE', 'modules':['am4/singularity_gfdl/2021.1.0']},
     'sherlock3_perf':{'cpus_per_node':128, 'cpu_slots':2, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7742',
-                      'mem_per_node':1024},
+                      'mem_per_node':1024, 'slurm_constraint':'CLASS:SH3_CPERF'},
     'unknown':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'unknown', 'cpu_gen':'unknown',
                   'mem_per_node':64}
     }
@@ -242,7 +246,7 @@ class AM4_batch_scripter(object):
                  force_copy_input=0, do_tar=0, hpc_config='mazama_hpc',
                  npes_atmos=48, nthreads_atmos=1, npes_ocean=0, job_name='AM4_run', sbatch_options_str='', current_date='1979,1,1,0,0,0',
                  slurm_partition=None, slurm_time=None,
-                 copy_timeout=6000, verbse=0):
+                 copy_timeout=6000, verbose=0):
         '''
         # parameters? input data file?
         #
@@ -268,7 +272,9 @@ class AM4_batch_scripter(object):
         #
         # @n_tasks: I believe n_tasks needs to be an integer multiple of 6, ie 6 faces to a cube.
         # (so any threads work on a single task/cube face). For now, let's stick with that, particularly
-        #. since we'll probably usually use nthreads=1
+        #. since we'll probably usually use nthreads=1... because, though it would nominally be faster
+        #  to do something like --ntasks=n_nodes --cpus-per-task=cpus_per_node , I think MOM6 still
+        #  does not work with OpenMP.
         #.
         '''
         #        #
@@ -314,6 +320,8 @@ class AM4_batch_scripter(object):
         if modules is None:
             modules = hpc_config.get('modules', ['intel/19', 'openmpi_3/', 'gfdl_am4/'])
             #modules = ['intel/19', 'openmpi_3/', 'gfdl_am4/']
+        if isinstance(modules, str):
+            modules = modules.split(',')
         #
         if input_data_path is None:
             input_data_path = '{}/data/AM4_run'.format(root_path)
@@ -434,6 +442,7 @@ class AM4_batch_scripter(object):
         if data_table_src is None:
             data_table_src = self.data_table_src
         #
+        # create workdir + RESTART and INPUT subdirs.
         for pth in ('INPUT', 'RESTART'):
             if not os.path.isdir(os.path.join(work_dir, pth)):
                 os.makedirs(os.path.join(work_dir, pth))
@@ -442,6 +451,7 @@ class AM4_batch_scripter(object):
         #if not os.path.isfile(diag_path) or force_copy:
         #    shutil.copy(diag_table_src, os.path.join(work_dir, 'diag_table'))
         #
+        # copy components into workdir:
         for src,dst in [(field_table_src, 'field_table'), (data_table_src, 'data_table'), (diag_table_src, 'diag_table')]:
             pth_dst = os.path.join(work_dir, dst)
             if not os.path.isfile(pth_dst) or force_copy:
@@ -654,6 +664,7 @@ class AM4_batch_scripter(object):
         #. input prams, what to read in from JSON (or something), etc. Note that, for now, this will
         #  focus on a SE3 Mazama build/configuration.
         '''
+        # TODO: add 'slurm_constraint' if available.
         #
         #fname_out = fname_out or os.path.join(self.work_dir, self.batch_out)
         fname_out = fname_out or self.batch_out
