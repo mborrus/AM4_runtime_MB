@@ -6,6 +6,7 @@ import matplotlib.dates as mpd
 import pylab as plt
 import datetime
 import os,sys
+import datetime as dtm
 #
 import subprocess
 import requests
@@ -232,7 +233,7 @@ class AM4_batch_scripter(object):
     'sherlock3_base':{'cpus_per_node':32, 'cpu_slots':1, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7502',
                       'mem_per_node':256, 'slurm_constraint':'CLASS:SH3_CBASE', 'modules':['am4/singularity_gfdl/2021.1.0']},
     'sherlock3_base_singularity':{'cpus_per_node':32, 'cpu_slots':1, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7502',
-                      'mem_per_node':256, 'slurm_constraint':'CLASS:SH3_CBASE', 'modules':['am4/singularity_gfdl/2021.1.0']},
+                      'mem_per_node':256, 'slurm_directives':{'constraint':'CLASS:SH3_CBASE'}, 'modules':['am4/singularity_gfdl/2021.1.0']},
     'sherlock3_perf':{'cpus_per_node':128, 'cpu_slots':2, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7742',
                       'mem_per_node':1024, 'slurm_constraint':'CLASS:SH3_CPERF'},
     'unknown':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'unknown', 'cpu_gen':'unknown',
@@ -244,11 +245,16 @@ class AM4_batch_scripter(object):
                  nml_template='nml_input_template.nml', modules=None,
                 diag_table_src='diag_table_v101', field_table_src='field_table_v101', data_table_src='data_table_v101',
                  force_copy_input=0, do_tar=0, hpc_config='mazama_hpc',
-                 npes_atmos=48, nthreads_atmos=1, npes_ocean=0, job_name='AM4_run', sbatch_options_str='', current_date='1979,1,1,0,0,0',
-                 slurm_partition=None, slurm_time=None,
-                 copy_timeout=6000, verbose=0):
+                 npes_atmos=48, nthreads_atmos=1, npes_ocean=0,
+                 job_name='AM4_run', current_date='1979,1,1,0,0,0',
+                 slurm_directives={}, mpi_debug=False,
+                 container_exe='singularity', am4_container_pathname=None, am4_exe='am4.x',
+                 copy_timeout=6000, verbose=0, **kwargs):
+        # slurm_partition=None, slurm_time=None,
         '''
         # parameters? input data file?
+        # TODO: reorganize to a more generalized SLURM directives? there are a lot of 'default' behaviors, so be careful with
+        #  the hierachy.
         #
         # not sure what this looks like yet, but... This script/class will be called by a wrapper
         #.  script. This process will constitute a step in a larer script (ie, each ~2 hour run in a
@@ -275,6 +281,13 @@ class AM4_batch_scripter(object):
         #. since we'll probably usually use nthreads=1... because, though it would nominally be faster
         #  to do something like --ntasks=n_nodes --cpus-per-task=cpus_per_node , I think MOM6 still
         #  does not work with OpenMP.
+        #
+        #  NOTE: slurm_directives{} and slurm-like variables:: It is not always crystal clear what variables
+        #  make sense as the "job" or "simulation instance" or "slurm". Ie, it makes sense for the class instance
+        #  to have something like a "job_name", though it is also a SLURM directive. Nominally, it makes sense that
+        #  these are different. Let's set the precedent that values in the `slurm_directives` dict override all
+        #  otherwise default or computed slurm directives. SO, we'll remove all slurm-only inputs and establish overwrite
+        #  hierarchy on others.
         #.
         '''
         #        #
@@ -286,6 +299,27 @@ class AM4_batch_scripter(object):
             #
         # else hpc_config better be a dict of HW configs.
         #
+        if isinstance(mpi_debug, str):
+            mpi_debug = is_true(mpi_debug)
+        #
+        # slurm_directives:
+        # SLURM directive may be passed in either via the slurm_directives parameter (we'll handle dict. or a string; might add
+        #  handling for 1 and 2d lists/arrays as well)., or from **kwargs with keys that start with 'slrum_' .
+        # start by checking for a string format. we'll probably handle that case before it gets here, but why not... assume if string,
+        # dir1 val1 dir2 val2 ...
+        if isinstance(slurm_directives, str):
+            slurm_directives={ky:vl for ky,vl in zip(slurm_directives.split(chr(32))[0:-1:2], slurm_directives.split(chr(32))[1::2])}
+        #
+        # add slurm kwds:
+        for ky,vl in kwargs.items():
+            if ky.startswith('slurm_'):
+                if verbose: print('** SLURM_DIRECTIVE: {}, {}'.format(ky,vl))
+                slurm_directives[ky[6:]]=vl
+        #
+        # add any slurm_directives from the hpc_config that are not overridden by inputs:
+        for ky,vl in hpc_config['slurm_directives'].items():
+            #
+            slurm_directives[ky]=slurm_directives.get(ky,vl)
         #
         if npes_atmos%6 != 0:
             npes_atmos += npes_atmos%6
@@ -317,6 +351,7 @@ class AM4_batch_scripter(object):
         # TODO: How to handle the nml file? here as part of the batch, or in a wrapper that handles both?
         #. or some combination
         #
+        # if modules not provided, look for it in hpc_config, otherwise some default set... or mayb should be blank?
         if modules is None:
             modules = hpc_config.get('modules', ['intel/19', 'openmpi_3/', 'gfdl_am4/'])
             #modules = ['intel/19', 'openmpi_3/', 'gfdl_am4/']
@@ -391,8 +426,13 @@ class AM4_batch_scripter(object):
 #                'land_model_nml':{'layout':self.layout_2, 'io_layout':self.layout_io_2},
 #                'ocean_model_nml':{'layout':self.layout_1, 'io_layout':self.layout_io_1},
 #                }
+        # 13 April 2021: adding the value `ncores_per_node` to &coupler_nml seems to be generating an error in the newer release
+        #  (xanadu_2021.01). So for now, let's get rid of it. I don't think it is used. We can use it internally to configure
+        #  threads- or tasks-per-node, but nominally it does not belong in the general config anyway. So let's start by pulling
+        #  it frm this default config.
+        #  from coupler_nml: , 'ncores_per_node':self.hpc_config['cpus_per_node'
         return {'coupler_nml':{'atmos_npes':self.npes_atmos, 'atmos_nthreads':self.nthreads_atmos,
-                              'ocean_npes':self.npes_ocean, 'ncores_per_node':self.hpc_config['cpus_per_node'],
+                              'ocean_npes':self.npes_ocean,
                               'current_date':self.current_date},
                'fv_core_nml':{'layout':'{},{}'.format(*self.layout_2),
                               'io_layout':'{},{}'.format(*self.layout_io_2)},
@@ -655,8 +695,7 @@ class AM4_batch_scripter(object):
         #
         return NML
     #
-    def write_batch_script(self, fname_out=None, chdir=None, output_out=None, output_err=None,
-                           mpi_exec=None, slurm_partition=None, slurm_time=None):
+    def write_batch_script(self, fname_out=None, mpi_exec=None, slurm_directives=None, **kwargs):
         '''
         # Just as it sounds; write an AM4 batch script. use various inputs (prams, json, dicts?);
         #. fetch, untar, copy input data as necessary, etc.
@@ -664,34 +703,57 @@ class AM4_batch_scripter(object):
         #. input prams, what to read in from JSON (or something), etc. Note that, for now, this will
         #  focus on a SE3 Mazama build/configuration.
         '''
-        # TODO: add 'slurm_constraint' if available.
+        # , slurm_partition=None, slurm_time=None output_out=None, output_err=None,
+        #
+        # TODO: add 'slurm_constraint' if available... but really, we just want a generalized slurm_directives, or
+        #  even better **slurm_directives. The main question is, do we want to keep 'special' directives, like
+        #  chdir, output_out, etc., or remove that code and just put all directives into a single dict (or something like it)?
         #
         #fname_out = fname_out or os.path.join(self.work_dir, self.batch_out)
         fname_out = fname_out or self.batch_out
-        chdir = chdir or self.work_dir
-        output_out = output_out or 'AM4_out_%j.out'
-        output_err = output_err or 'AM4_out_%j.err'
         mpi_exec = mpi_exec or self.mpi_exec
-        slurm_partition = slurm_partition or self.slurm_partition
-        slurm_time = slurm_time or self.slurm_time
+        container_exe = self.container_exe
+        if self.mpi_debug:
+            container_exe = '{} --debug'.format(container_exe)
+        #
+        #output_out = output_out or 'AM4_out_%j.out'
+        #output_err = output_err or 'AM4_out_%j.err'\
+        #
+        # use input or self.slurm_directives, then add any slurm_ kwargs (like in init).
+        slurm_directives = slurm_directives or self.slurm_directives
+        for ky,vl in kwargs:
+            if ky.startswith('slurm_'):
+                slurm_directives[ky[6:]] = vl
+        #
+        for key,alt in [('chdir', self.work_dir), ('output', 'AM4_out_%j.out'), ('error', 'AM4_error_%j.err'), ('job-name', self.job_name)]:
+            slurm_directives[key]=slurm_directives.get(key, alt)
+        #chdir = chdir or self.work_dir
+        #slurm_partition = slurm_partition or self.slurm_partition
+        #slurm_time = slurm_time or self.slurm_time
         #
         with open(fname_out, 'w') as fout:
             # This section should be pretty universal:
             fout.write('#!/bin/bash\n#\n')
             #
             fout.write('#SBATCH --ntasks={}\n'.format(self.n_tasks))
-            fout.write('#SBATCVH --ncpus_per_task={}\n'.format(self.nthreads_atmos))
-            if not self.job_name is None or self.job_name=='':
-                fout.write('#SBATCH --job-name={}\n'.format(self.job_name))
+            fout.write('#SBATCH --cpus-per-task={}\n'.format(self.nthreads_atmos))
+            #if not self.job_name is None or self.job_name=='':
+            #    fout.write('#SBATCH --job-name={}\n'.format(self.job_name))
             #
-            fout.write('#SBATCH --chdir={}\n'.format(chdir) )
-            fout.write('#SBATCH --output={}\n'.format(output_out))
-            fout.write('#SBATCH --error={}\n'.format(output_err))
+            #fout.write('#SBATCH --chdir={}\n'.format(chdir) )
+            #fout.write('#SBATCH --output={}\n'.format(output_out))
+            #fout.write('#SBATCH --error={}\n'.format(output_err))
             #
-            if not slurm_partition is None:
-                fout.write('#SBATCH --partition={}\n'.format(slurm_partition))
-            if not slurm_time is None:
-                fout.write('#SBATCH --time={}\n'.format(slurm_time))
+            # Additional SLURM directives:
+            for ky,vl in slurm_directives.items():
+                fout.write('#SBATCH --{}={}\n'.format(ky,vl))
+            #
+            #if not slurm_partition is None:
+            #    fout.write('#SBATCH --partition={}\n'.format(slurm_partition))
+            #if not slurm_time is None:
+            #    fout.write('#SBATCH --time={}\n'.format(slurm_time))
+            #
+            fout.write('#\n# sbatch script written by AM4py.py, {}\n#\n'.format(dtm.datetime.now()))
             #
             # Module swill be platform dependent. We could handle this section with JSON
             #. if we wanted to.
@@ -711,25 +773,59 @@ class AM4_batch_scripter(object):
             fout.write('export NC_BLKSZ=1M\n')
             fout.write('export F_UFMTENDIAN=big\n')
             #
-            # executable will be pretty system/build dependent
-            fout.write('EXECUTABLE=${AM4_GFDL_BIN}/${AM4_GFDL_EXE}\n')
+            # executable will be pretty system/build dependent. The bin/exe format does not work well for containers, so
+            #  let's just force the _EXE variable to be the actual execuable command.
+            #fout.write('EXECUTABLE=${AM4_GFDL_BIN}/${AM4_GFDL_EXE}\n')
+            #fout.write('EXECUTABLE=${AM4_GFDL_EXE}\n')
             #
             # We can probably make this part pretty universal as well...
             fout.write('#\nulimit -s unlimited\n#\n')
             fout.write('#\ncd {}\n#\n'.format(self.work_dir))
+            fout.write('#\n#\n')
             #
             # NOTE: I don't think we can use threads anyway, so let's just not allow it here.
             #  we'll probaly need to go back and force it to 1 above as well.
 #            fout.write('MPI_COMMAND=\"{} {}{} {}{} ${{EXECUTABLE}}\"\n#\n'.format(mpi_exec['exec'],
 #                                                            mpi_exec['ntasks'], self.n_tasks,
 #                                                            mpi_exec['cpu_per_task'], self.n_threads))
-            fout.write('MPI_COMMAND=\"{} {}{} ${{EXECUTABLE}}\"\n#\n'.format(mpi_exec['exec'],
-                                                            mpi_exec['ntasks'], self.n_tasks)
-                                                            )
-
-            fout.write('echo ${MPI_COMMAND}\n')
+            # TODO:
+            # for containers, we need to bind the data directory (--bind {data_dir}:{container_mount_point}. So this needs to get
+            #    reworked a bit. We should probably put more logic into the Python script, as opposed to constructing
+            #    the execute command in env. variables and module. Maybe provide more information internally, like:
+            #  $AM4_CONTAINER_PATH, then, if var, do container logicl...
+            if self.am4_container_pathname is None:
+                mpi_command = '{} {}{} ${{AM4_GFDL_EXE}}\n#\n'.format(mpi_exec['exec'],
+                                                                mpi_exec['ntasks'], self.n_tasks)
+                #fout.write('MPI_COMMAND=\"{} {}{} ${{AM4_GFDL_EXE}}\"\n#\n'.format(mpi_exec['exec'],
+                #                                                mpi_exec['ntasks'], self.n_tasks)
+                #                                                )
+            else:
+                # There is a container:
+                tmp_script =  os.path.join(self.work_dir, 'container_script_tmp.sh')
+                with open(tmp_script, 'w') as fout_tmp:
+                    fout_tmp.write('#!/bin/bash\n')
+                    fout_tmp.write('# temporary exec script, to facilitate multi-command *singularity exec* calls.\n')
+                    fout_tmp.write('cd /workdir\n')
+                    fout_tmp.write('{}\n'.format(self.am4_exe))
+                #
+                os.chmod(tmp_script, 0o755)
+                mpi_command = '{} {}{}  {} exec --bind {}:/workdir {} /workdir/{} '.format(mpi_exec['exec'], mpi_exec['ntasks'], self.n_tasks,
+                            container_exe, self.work_dir, self.am4_container_pathname, os.path.split(tmp_script)[-1]
+                            )
+                # container_exe='singularity', am4_container_pathname=None, am4_exe='am4.x',
+#                mpi_command = '{} {}{}  {} exec --bind {}:/workdir {} cd /workdir;{}  '.format(mpi_exec['exec'], mpi_exec['ntasks'], self.n_tasks,
+#                            self.container_exe, self.work_dir, self.am4_container_pathname, self.am4_exe
+#                            )
+                
             #
-            fout.write('${MPI_COMMAND}\n\n')
+            fout.write('echo "{}"\n'.format(mpi_command))
+            fout.write('#\n#\n')
+            fout.write('{}\n'.format(mpi_command))
+            fout.write('#\n')
+            #fout.write('echo ${MPI_COMMAND}\n')
+            #
+            #fout.write('${MPI_COMMAND}\n\n')
+
             # add an error-check:
             for ln in ['if [[ $? -ne 0 ]]; then', 'echo "ERROR: Run failed." 1>&2',
                        '"ERROR: Output from run in {}/fms.out ... or maybe in a log file" 1>&2'.format(self.work_dir),
@@ -745,6 +841,10 @@ def get_AM4_layouts(n_tasks=24):
     # compute possible layouts. Include (some) error checking for valid n_tasks?
     '''
     # get all integer factor pairs:
+    # TODO: handle this exceptional case better:
+    if n_tasks==1:
+        return numpy.array([[1,1]])
+    #
     return numpy.array(sorted([(k,int(n_tasks/k)) for k in range(1, int(numpy.ceil(n_tasks**.5)))
                                if n_tasks%k==0],
                                 key = lambda rw: numpy.sum(rw)))
@@ -760,5 +860,10 @@ def get_AM4_io_layouts(layout):
                                if layout[1]%k==0],
                               key=lambda rw:numpy.sum(rw)))
     #
+def is_true(s):
+    if str(s).lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
+        return True
+    else:
+        return False
 
           

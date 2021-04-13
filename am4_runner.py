@@ -4,18 +4,20 @@ import AM4py
 import subprocess
 import shutil
 import sys
+import datetime as dtm
 #
 # TODO:
 #  1) move action to a "do it" function
 #  2) handle parameters.
 class Setup_and_run(object):
-    def __init__(self, input_data_path=None, work_dir=None, pth_restart=None, pth_input=None, batch_job_name=None, nml_template='input_yoder_v101.nml',
-        job_name='AM4_dev', slurm_partition='serc', input_nml='input.nml', n_cpu_atmos=96, copy_timeout=6000, modules=None,
+    def __init__(self, input_data_path=None, work_dir=None, pth_restart=None, pth_input=None, batch_job_name=None, nml_template='nml_input_template.nml',
+        job_name='AM4_dev', input_nml='input.nml', n_cpu_atmos=96, copy_timeout=6000, modules=None,
         n_days_total=60, runtime_days=1, runtime_months=0, npx=97, npy=97, npz=33,
-        is_restart=False, verbose=True, do_batch=True, **kwargs):
+        is_restart=False, verbose=True, do_batch=True, slurm_directives={}, **kwargs):
         '''
         # process input parameters; setup and run. Maybe separate the setup, stage, run phases?
         '''
+        print('** DEBUG locals(): {}'.format(locals()))
         #
         # default variable values; we'll reset any variables passed via **kwargs after
         #  default values are set:
@@ -26,12 +28,18 @@ class Setup_and_run(object):
         #
         if batch_job_name is None: batch_job_name = os.path.join(work_dir, 'AM4_batch_example.bs')
         #
+        # add slurm kwds:
+        #for ky,vl in kwargs.items():
+        #    if ky.startswith('slurm_'):
+        #        slurm_directives[ky[6:]]=vl
+
+        #
         #is_restart = False
         #verbose = True
         #job_name = 'AM4_dev'
         #slurm_partition='cees'
         #input_nml = 'input.nml'
-        
+        #
         n_cpu_atmos = int(n_cpu_atmos)
         copy_timeout = int(copy_timeout)
         #nml_template='input_yoder_v101.nml'
@@ -47,7 +55,10 @@ class Setup_and_run(object):
         npy = int(npy)
         npz = int(npz)
         #
-        do_batch=bool(do_batch)
+        do_batch = AM4py.is_true(do_batch)
+        
+        #
+        print('** ** ** ** DEBUG do_batch:: {}'.format(do_batch))
         verbose=int(verbose)
         #
         # This is nominally a fast, slick way to update default variables, but:
@@ -72,9 +83,9 @@ class Setup_and_run(object):
         #  the elapsed time (in fractional days) for that sub-run.
         #
         ABS = AM4py.AM4_batch_scripter(input_data_path=input_data_path, work_dir=work_dir, npes_atmos=n_cpu_atmos,
-                                   job_name=job_name, batch_out=batch_job_name, slurm_partition=slurm_partition,
-                                   modules=modules,
-                                    verbose=verbose )
+                                   job_name=job_name, batch_out=batch_job_name, modules=modules,
+                                   slurm_directives=slurm_directives,
+                                    verbose=verbose, **kwargs )
         #
         restart_date = ABS.get_restart_current_date()
         #restart_date_dtm = dtm.datetime(*(','.join(restart_date)) )
@@ -101,8 +112,12 @@ class Setup_and_run(object):
             my_configs['fv_core_nml']['adjust_dry_mass'] = '.false.'
         #
         print('*** NML configs: {}'.format(my_configs))
+        nml_out=os.path.join(ABS.work_dir, input_nml)
         my_nml = ABS.make_NML(nml_template=nml_template, nml_configs=[my_configs],
-                          nml_out=os.path.join(ABS.work_dir, input_nml) )
+                          nml_out=nml_out )
+        #
+        #print('*** DEBUG: {}'.format(my_nml))
+        print('*** DEBUG: nml created: {}'.format(nml_out))
         #
         # just in case... there area  number of places where we can accidentally remove this path, which the Sim apparently cannot
         #  create.
@@ -117,7 +132,7 @@ class Setup_and_run(object):
             #    # NOTE: since this is a mv operation, it should be automagically recursive on all elements:
             #    # this appears to throw an error if the file already exists. we can handle that, or just use a subprocess...
             #    shutil.move(os.path.join(pth_restart, filename), pth_input )
-            sp_out = subprocess.run('mv {}/* {}/'.format(pth_restart, pth_input), shell=True, check=True,capture_output=True, timeout=copy_timeout)
+            sp_out = subprocess.run('mv -f {}/* {}/'.format(pth_restart, pth_input), shell=True, check=True,capture_output=True, timeout=copy_timeout)
         #
         #my_nml = NML_from_nml('input_yoder_v101.nml')
         if verbose:
@@ -130,15 +145,26 @@ class Setup_and_run(object):
         ABS.write_batch_script()
         #
         if do_batch:
+            if verbose:
+                print('** ** submitting batch job: {}'.format(ABS.batch_out))
             sbatch_output = subprocess.run('sbatch {}'.format(ABS.batch_out), shell=True, check=True, capture_output=True )
 
 if __name__ == '__main__':
     #
+    # am4_container_pathname=None, am4_exe='am4.x'
     # example (Sherlock, gfdl container):
     # NOTE: modules and hpc_config here are redundant.
-    # python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/workdir nml_template=nml_input_template.nml n_cpu_atmos=24 modules=am4/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity do_batch=False
+    # srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/workdir nml_template=input_xanadu_2021.01.nml n_cpu_atmos=24 modules=am4/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec='srun' am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=01:00:00 do_batch=False
     # process inputs:
     #n_args = len(sys.argv)
     args = dict([s.split('=') for s in sys.argv[1:] if '=' in s ])
     #
+    # NOTE: slurm_directives won't work -- ie it's not easy to pass a list as a parmeter because 1) args will be separated by whitespace
+    #  (spaces), and then 2) some slurm directives (ie, partition) allow comma-separated inputs. so let's just use the slurm_* kwds. 
+#    if 'slurm_directives' in args.keys():
+#        # NOTE: this string conversion is now done in AM4py.py as well.
+#        sd_vals={s1:s2 for s1,s2 in zip(args['slurm_directives'].split(chr(32))[0:-1:2], args['slurm_directives'].split(chr(32))[1::2])}
+#        args['slurm_directives'] = sd_vals
+    #
+    #print('** DEBUG args: {}'.format(args))
     run_script = Setup_and_run(**args)
