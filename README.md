@@ -27,5 +27,6 @@ The workflows for running AM4 are... complex. These tools attempt to automate an
   - Processes input parameters to construct a working `input.nml` file (manages layouts, processor counts, etc.). Requirements for `input.nml` may evolove between versions, and (*surprise!*) AM4 can be very sensitive to this. For example, older versions accepted an entry, `cpus-per-node=`, and AM4 will not just ignore the entry; they will break instead.
   - Handles restart process (at least partially).
   - Can submit (or just run) a 1 cpu management job to fetch data (can take a while...), process NML, write batch, then submit much larger job.
-
+- **FRE-NCtools**: https://github.com/NOAA-GFDL/FRE-NCtools
+  - Some tools for working with GFDL models. Should include combining restart files, etc.
 
