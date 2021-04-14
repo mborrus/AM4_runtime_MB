@@ -14,3 +14,18 @@ The workflows for running AM4 are... complex. These tools attempt to automate an
 - `AM4_runner.py`: Command line callable scripts to implement `AM4_batch_scripter()`. Some sample commands are provided in-code. As discussed above, this system is designed to accept and pass on `**kwargs`, so any input parameters to `AM4_batch_scripter()` that don't require special handling can be provided here as keywords and, in most cases, will make their way through the workflow. This is a work in progress.
 
 **NOTE:** One syntactical challenge can be module availability for different hardware and on different HPCs. For example, a call to `AM4_runner.py` might depend on an AM4 software module for variables like `$AM4_GFDL_EXE`, `$AM4_CONTAINER_NAME`, etc., and that module might not be available for some hardware (ie, modules are build out for Sherlock 2.0 and 3.0 (Stanford), but if you try to run the script from a Sherlock 1.0 node (either from a public partition or a login node -- which is ot for computing), you might get some errors related to modules not being available.
+
+## References:
+- **AM4 source:** https://github.com/NOAA-GFDL/AM4
+- **AM4 JSS Fork:** https://github.com/jeffersonscientific/AM4
+  - NOTE: At this point, the main benefit of this fork is probalby some additional documentation. Other useful elements, like runtime or compile scripts have been moved off to separate repositories (see below).
+- **AM4_compilers:** https://github.com/jeffersonscientific/AM4_compilers
+  - Scripts and documentation to facilitate compilation. This may be a work in progress. This repo was formed after a successful compile script was... compiled for the Stanford Earth Mazama HPC, and the complexity thereof was fully appreciated. It is likely that there are not (yet) any push-button working scripts. 
+  - Expect container-based solutions here as well.
+- **AM4_runtime:** Python, jupyter notebook, and shell scripts to (really) simplify AM4 runtime operations.
+  - Includes code to fetch input data, if it is not present.
+  - Processes input parameters to construct a working `input.nml` file (manages layouts, processor counts, etc.). Requirements for `input.nml` may evolove between versions, and (*surprise!*) AM4 can be very sensitive to this. For example, older versions accepted an entry, `cpus-per-node=`, and AM4 will not just ignore the entry; they will break instead.
+  - Handles restart process (at least partially).
+  - Can submit (or just run) a 1 cpu management job to fetch data (can take a while...), process NML, write batch, then submit much larger job.
+
+
