@@ -372,7 +372,7 @@
 
  &cana_nml
        turbulence_to_use = "lm3v"
-       init_co2 = 286.0e-6
+       init_co2 = 1144.0e-6
        canopy_air_mass_for_tracers = 10.0
        allow_small_z0 = .true.
 /
