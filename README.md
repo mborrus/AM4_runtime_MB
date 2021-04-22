@@ -29,4 +29,5 @@ The workflows for running AM4 are... complex. These tools attempt to automate an
   - Can submit (or just run) a 1 cpu management job to fetch data (can take a while...), process NML, write batch, then submit much larger job.
 - **FRE-NCtools**: https://github.com/NOAA-GFDL/FRE-NCtools
   - Some tools for working with GFDL models. Should include combining restart files, etc.
+- **Namelist guide:** https://www.gfdl.noaa.gov/wp-content/uploads/2017/09/fv3_namelist_Feb2017.pdf
 
