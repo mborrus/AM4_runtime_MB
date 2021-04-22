@@ -786,7 +786,7 @@
         layout = 144,3
         io_layout = 1,3
 	ice_method = 'none',
-	sst_method = 'aqua_planet_4',
+	sst_method = 'aqua_planet_1',
 /
 
  &ice_spec_nml
