@@ -372,7 +372,7 @@
 
  &cana_nml
        turbulence_to_use = "lm3v"
-       init_co2 = 1144.0e-6
+       init_co2 = 286.0e-6
        canopy_air_mass_for_tracers = 10.0
        allow_small_z0 = .true.
 /
@@ -963,13 +963,13 @@
       verbose = 3
       gas_printout_freq = 96
 
-      time_varying_co2 = .false.,
-      co2_specification_type = 'base_and_trend',
+      time_varying_co2 = .true.,
+      co2_variation_type = 'linear',
+      co2_dataset_entry = 1979 1 1 0 0 0
+      co2_specification_type = 'time_series',
       co2_floor = 100.0E-06,
       co2_ceiling = 1600.0E-06,
-      co2_base_value = 1392.0E-06,
-      co2_change_rate = 0.0,
-      co2_data_source = 'namelist'
+      co2_data_source = 'input'
 
       time_varying_ch4 = .true.,
       ch4_variation_type = 'linear'
