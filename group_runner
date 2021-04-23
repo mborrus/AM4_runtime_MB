@@ -1,10 +1,13 @@
 #!/bin/bash
 #
-#SBATCH --array=5-20%4
+#SBATCH --array=1-4%2
 #SBATCH --output=./jobfiles/group_runner%A-%a.out
 #SBATCH --job-name=group_Am4
 #SBATCH --time=24:00:00
 #SBATCH -p serc
 #SBATCH --verbose
-srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/co2/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=am4/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec='srun' am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=12:00:00 do_batch=True
-sleep 10h
+conda activate
+### srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/co2/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=am4/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec='srun' am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=12:00:00 do_batch=True
+### sleep 11h
+sleep 5s
+conda deactivate
