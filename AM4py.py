@@ -825,7 +825,23 @@ class AM4_batch_scripter(object):
             #fout.write('echo ${MPI_COMMAND}\n')
             #
             #fout.write('${MPI_COMMAND}\n\n')
-
+            fout.write('mppnccombine -r 19790101.atmos_daily.tile1.nc')
+            fout.write('mppnccombine -r 19790101.atmos_daily.tile2.nc')
+            fout.write('mppnccombine -r 19790101.atmos_daily.tile3.nc')
+            fout.write('mppnccombine -r 19790101.atmos_daily.tile4.nc')
+            fout.write('mppnccombine -r 19790101.atmos_daily.tile5.nc')
+            fout.write('mppnccombine -r 19790101.atmos_daily.tile6.nc')
+            fout.write('#\n')
+            fout.write('conda deactivate')
+            fout.write('git clone https://github.com/mborrus/FREgrid.git')
+            fout.write('mv -v ./FREgrid/* .')
+            fout.write('rm -rf FREgrid/')
+            fout.write('chmod 755 GridRunner_sherlock')
+            fout.write('./GridRunner_sherlock')
+            
+            fout.write('#\n')
+            
+            
             # add an error-check:
             for ln in ['if [[ $? -ne 0 ]]; then', 'echo "ERROR: Run failed." 1>&2',
                        '"ERROR: Output from run in {}/fms.out ... or maybe in a log file" 1>&2'.format(self.work_dir),
