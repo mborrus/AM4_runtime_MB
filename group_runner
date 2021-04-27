@@ -1,25 +1,25 @@
 #!/bin/bash
 #
-#SBATCH --array=5-15%2
+#SBATCH --array=6-16%2
 #SBATCH --output=./jobfiles/group_runner%A-%a.out
 #SBATCH --job-name=group_Am4
-#SBATCH --time=60:00:00
+#SBATCH --time=70:00:00
 #SBATCH -p serc
 #SBATCH --verbose
 echo "moving to runtime dir"
 cd /scratch/users/mborrus/AM4/AM4_runtime_MB
 
 echo "starting first run"
-srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/co2/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=am4/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec='srun' am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=12:00:00 do_batch=True
+srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/co2/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=am4/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec='srun' am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=15:00:00 do_batch=True
 echo "first run submitted"
 
 echo "starting second run"
-srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/quarter/${SLURM_ARRAY_TASK_ID} nml_template=input_quarter.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=am4/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec='srun' am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=12:00:00 do_batch=True
+srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/quarter/${SLURM_ARRAY_TASK_ID} nml_template=input_quarter.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=am4/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec='srun' am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=15:00:00 do_batch=True
 echo "second run submitted"
 echo "  entering hibernation"
-sleep 11h
+sleep 15h
 echo "awoke from hibernation"
-ml load git
+ml load netcdf
 
 cd $SCRATCH/AM4/co2/${SLURM_ARRAY_TASK_ID}
 mppnccombine -r 19790101.atmos_daily.tile1.nc
@@ -29,12 +29,6 @@ mppnccombine -r 19790101.atmos_daily.tile4.nc
 mppnccombine -r 19790101.atmos_daily.tile5.nc
 mppnccombine -r 19790101.atmos_daily.tile6.nc
 
-git clone https://github.com/mborrus/FREgrid.git 
-mv -v ./FREgrid/* .
-rm -rf FREgrid/ 
-chmod 755 GridRunner_sherlock
-./GridRunner_sherlock
-
 cd $SCRATCH/AM4/quarter/${SLURM_ARRAY_TASK_ID}
 mppnccombine -r 19790101.atmos_daily.tile1.nc
 mppnccombine -r 19790101.atmos_daily.tile2.nc
@@ -42,9 +36,3 @@ mppnccombine -r 19790101.atmos_daily.tile3.nc
 mppnccombine -r 19790101.atmos_daily.tile4.nc
 mppnccombine -r 19790101.atmos_daily.tile5.nc
 mppnccombine -r 19790101.atmos_daily.tile6.nc
-
-git clone https://github.com/mborrus/FREgrid.git 
-mv -v ./FREgrid/* .
-rm -rf FREgrid/ 
-chmod 755 GridRunner_sherlock
-./GridRunner_sherlock
