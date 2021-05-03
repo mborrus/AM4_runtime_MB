@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#SBATCH --array=6-16%2
+#SBATCH --array=17-21%2
 #SBATCH --output=./jobfiles/group_runner%A-%a.out
 #SBATCH --job-name=group_Am4
 #SBATCH --time=50:00:00
