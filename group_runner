@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#SBATCH --array=17-22%2
+#SBATCH --array=23-27%1
 #SBATCH --output=./jobfiles/group_runner%A-%a.out
 #SBATCH --job-name=group_Am4
 #SBATCH --time=50:00:00
@@ -10,15 +10,15 @@
 echo "moving to runtime dir"
 cd /scratch/users/mborrus/AM4/AM4_runtime_MB
 
-echo "starting first run"
-srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/co2/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=am4/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec='srun' am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=23:00:00 do_batch=True
-echo "first run submitted"
+%echo "starting first run"
+%srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/co2/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=am4/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec='srun' am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=23:00:00 do_batch=True
+%echo "first run submitted"
 
 echo "starting second run"
 srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/quarter/${SLURM_ARRAY_TASK_ID} nml_template=input_quarter.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=am4/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec='srun' am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=23:00:00 do_batch=True
 echo "second run submitted"
 echo "  entering hibernation"
-sleep 15h
+sleep 12h
 echo "awoke from hibernation"
 #ml load netcdf
 
