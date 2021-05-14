@@ -794,7 +794,6 @@
       minimum_ice_concentration = 0.5
       minimum_ice_thickness = 0.1
       sst_degk = .true.
-      sst_pert = 4
 /
 
  &interpolator_nml
