@@ -223,6 +223,9 @@ class AM4_batch_scripter(object):
     mpi_execs = {'mpirun':{'exec': 'mpirun', 'ntasks':'-np ', 'cpu_per_task':'--cpus-per-proc '},
                  'srun':{'exec':'srun', 'ntasks':'--ntasks=', 'cpu_per_task':'--cpus-per-task='}}
     #
+    # TODO: figure out how to move these to .yaml (or call it what you want)
+    #  config files. They really don't belong here like this. Also, better
+    #  way to manage the container version/module
     HPC_configs={
     'mazama_hpc':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'intel', 'cpu_gen':'haswell',
                   'mem_per_node':64, 'modules':['intel/19', 'openmpi_3/', 'gfdl_am4/']},
@@ -794,23 +797,32 @@ class AM4_batch_scripter(object):
             #    the execute command in env. variables and module. Maybe provide more information internally, like:
             #  $AM4_CONTAINER_PATH, then, if var, do container logicl...
             if self.am4_container_pathname is None:
-                mpi_command = '{} {}{} ${{AM4_GFDL_EXE}}\n#\n'.format(mpi_exec['exec'],
-                                                                mpi_exec['ntasks'], self.n_tasks)
+                mpi_command = '{} {}{} {}'.format(mpi_exec['exec'],
+                                                                mpi_exec['ntasks'], self.n_tasks, self.am4_exe)
                 #fout.write('MPI_COMMAND=\"{} {}{} ${{AM4_GFDL_EXE}}\"\n#\n'.format(mpi_exec['exec'],
                 #                                                mpi_exec['ntasks'], self.n_tasks)
                 #                                                )
             else:
                 # There is a container:
-                tmp_script =  os.path.join(self.work_dir, 'container_script_tmp.sh')
-                with open(tmp_script, 'w') as fout_tmp:
-                    fout_tmp.write('#!/bin/bash\n')
-                    fout_tmp.write('# temporary exec script, to facilitate multi-command *singularity exec* calls.\n')
-                    fout_tmp.write('cd /workdir\n')
-                    fout_tmp.write('{}\n'.format(self.am4_exe))
+                # TODO: do we actually need tmp_script? turns out we don't need
+                #  to switch into the workdir -- ie, the output will be passed
+                #  through to the host machine, local directory.
                 #
-                os.chmod(tmp_script, 0o755)
-                mpi_command = '{} {}{}  {} exec --bind {}:/workdir {} /workdir/{} '.format(mpi_exec['exec'], mpi_exec['ntasks'], self.n_tasks,
-                            container_exe, self.work_dir, self.am4_container_pathname, os.path.split(tmp_script)[-1]
+                # bit using temp script:
+                ########
+                #tmp_script =  os.path.join(self.work_dir, 'container_script_tmp.sh')
+                #with open(tmp_script, 'w') as fout_tmp:
+                #    fout_tmp.write('#!/bin/bash\n')
+                #    fout_tmp.write('# temporary exec script, to facilitate multi-command *singularity exec* calls.\n')
+                #    fout_tmp.write('cd /workdir\n')
+                #    fout_tmp.write('{}\n'.format(self.am4_exe))
+                ##
+                #os.chmod(tmp_script, 0o755)
+                #mpi_command = '{} {}{}  {} exec --bind {}:/workdir {} /workdir/{} '.format(mpi_exec['exec'], mpi_exec['ntasks'], self.n_tasks,
+                #            container_exe, self.work_dir, self.am4_container_pathname, os.path.split(tmp_script)[-1]
+                #            )
+                mpi_command = '{} {}{}  {} exec {} {}'.format(mpi_exec['exec'], mpi_exec['ntasks'], self.n_tasks,
+                            container_exe, self.am4_container_pathname, self.am4_exe
                             )
                 # container_exe='singularity', am4_container_pathname=None, am4_exe='am4.x',
 #                mpi_command = '{} {}{}  {} exec --bind {}:/workdir {} cd /workdir;{}  '.format(mpi_exec['exec'], mpi_exec['ntasks'], self.n_tasks,
