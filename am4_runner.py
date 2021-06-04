@@ -6,6 +6,11 @@ import shutil
 import sys
 import datetime as dtm
 #
+'''
+A script/class to set up and batch-run AM4 scenarios. Note that the Python part should be platform independent (and so
+maybe should move to AM4py.py ??); the example executions will use environment variables that are clearly system dependent.
+'''
+#
 # TODO:
 #  1) move action to a "do it" function
 #  2) handle parameters.
@@ -159,7 +164,7 @@ if __name__ == '__main__':
     #n_args = len(sys.argv)
     args = dict([s.split('=') for s in sys.argv[1:] if '=' in s ])
     #
-    # NOTE: slurm_directives won't work -- ie it's not easy to pass a list as a parmeter because 1) args will be separated by whitespace
+    # NOTE: trying to pass the parameter `slurm_directives` won't work -- ie it's not easy to pass a list as a parmeter because 1) args will be separated by whitespace. also, unless specially handled, it will try to add a directive callde `directives`, so just don't do it.
     #  (spaces), and then 2) some slurm directives (ie, partition) allow comma-separated inputs. so let's just use the slurm_* kwds. 
 #    if 'slurm_directives' in args.keys():
 #        # NOTE: this string conversion is now done in AM4py.py as well.
