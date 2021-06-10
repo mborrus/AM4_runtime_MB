@@ -236,6 +236,8 @@ class AM4_batch_scripter(object):
                       'mem_per_node':256, 'slurm_constraint':'CLASS:SH3_CBASE', 'modules':['am4/singularity_gfdl/2021.1.0']},
     'sherlock3_base_singularity':{'cpus_per_node':32, 'cpu_slots':1, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7502',
                       'mem_per_node':256, 'slurm_directives':{'constraint':'CLASS:SH3_CBASE'}, 'modules':['am4/singularity_gfdl/2021.1.0']},
+    'sherlock3_singularity':{'cpus_per_node':[32,128], 'cpu_slots':[1,2], 'cpu_make':'AMD', 'cpu_gen':['EPYC_7502''EPYC_7742'],
+                      'mem_per_node':[256,1024], 'slurm_directives':{'constraint':['CLASS:SH3_CBASE|CLASS:SH3_CPERF']}, 'modules':['am4/singularity_gfdl/2021.1.0']},
     'sherlock3_perf':{'cpus_per_node':128, 'cpu_slots':2, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7742',
                       'mem_per_node':1024, 'slurm_constraint':'CLASS:SH3_CPERF'},
     'unknown':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'unknown', 'cpu_gen':'unknown',
@@ -872,6 +874,8 @@ def get_AM4_io_layouts(layout):
                               key=lambda rw:numpy.sum(rw)))
     #
 def is_true(s):
+    if str(s).lower() in ['none', 'null','', ' ']:
+        return None
     if str(s).lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
         return True
     else:

@@ -71,8 +71,10 @@ class Setup_and_run(object):
         npz = int(npz)
         #
         do_batch = AM4py.is_true(do_batch)
+        is_restart = AM4py.is_true(is_restart)
         #
         print('** ** ** ** DEBUG do_batch:: {}'.format(do_batch))
+        print('** ** ** ** DEBUG is_restart:: {}'.format(is_restart))
         verbose=int(verbose)
         #
         # This is nominally a fast, slick way to update default variables, but:
