@@ -18,7 +18,7 @@ class Setup_and_run(object):
     def __init__(self, input_data_path=None, work_dir=None, pth_restart=None, pth_input=None, batch_job_name=None, nml_template='nml_input_template.nml',
         job_name='AM4_dev', input_nml='input.nml', n_cpu_atmos=96, copy_timeout=6000, modules=None,
         n_days_total=60, runtime_days=1, runtime_months=0, npx=97, npy=97, npz=33,
-        is_restart=False, verbose=True, do_batch=True, slurm_directives={}, **kwargs):
+        is_restart=None, verbose=True, do_batch=True, slurm_directives={}, **kwargs):
         '''
         # process input parameters; setup and run. Maybe separate the setup, stage, run phases?
         '''
@@ -26,12 +26,22 @@ class Setup_and_run(object):
         #
         # default variable values; we'll reset any variables passed via **kwargs after
         #  default values are set:
-        if input_data_path is None: input_data_path = os.path.join(os.environ['SCRATCH'], 'AM4', 'AM4_data3', 'AM4_run')
-        if work_dir is None: work_dir = os.path.join(os.environ['SCRATCH'], 'AM4', 'workdir')
-        if pth_restart is None: pth_restart = os.path.join(work_dir, 'RESTART')
-        if pth_input is None: pth_input   = os.path.join(work_dir, 'INPUT')
+        default_work_root = os.environ['HOME']
+        if 'SCRATCH' in os.environ.keys():
+            default_work_root = os.environ['SCRATCH']
         #
-        if batch_job_name is None: batch_job_name = os.path.join(work_dir, 'AM4_batch_example.bs')
+        if work_dir is None:
+            work_dir = os.path.join(default_work_root, 'AM4', 'workdir')
+            #work_dir = os.path.join(os.environ['SCRATCH'], 'AM4', 'workdir')
+        if input_data_path is None:
+            input_data_path = os.path.join(default_work_root, 'AM4', 'AM4_data', 'AM4_run')
+        if pth_restart is None:
+            pth_restart = os.path.join(default_work_root, 'RESTART')
+        if pth_input is None:
+            pth_input = os.path.join(default_work_root, 'INPUT')
+        #
+        if batch_job_name is None:
+            batch_job_name = os.path.join(default_work_root, 'AM4_batch_example.bs')
         #
         # add slurm kwds:
         #for ky,vl in kwargs.items():
@@ -61,7 +71,6 @@ class Setup_and_run(object):
         npz = int(npz)
         #
         do_batch = AM4py.is_true(do_batch)
-        
         #
         print('** ** ** ** DEBUG do_batch:: {}'.format(do_batch))
         verbose=int(verbose)
@@ -92,25 +101,41 @@ class Setup_and_run(object):
                                    slurm_directives=slurm_directives,
                                     verbose=verbose, **kwargs )
         #
+        zz = ABS.get_input_data(verbose=True)
+        #
         restart_date = ABS.get_restart_current_date()
         #restart_date_dtm = dtm.datetime(*(','.join(restart_date)) )
-        if verbose:
-            print('*** ABS_current_date: {}'.format(restart_date))
-            print('*** ABS variables:')
-            #
-            for key,val in ABS.__dict__.items():
-                print('{}: {}'.format(key,val))
-        #
-        zz = ABS.get_input_data(verbose=True)
         #
         # manage RESTART:
         # 1) fetch current_date from coupler_nml (see my_configs below)
         # 2) move contents of RESTART into INPUT. RESTART should be empty.
         #   TODO: move this functionality to the ABS object. maybe .queue_for_restart(), which will do this move and anything else we determine
         #    to be necessary later. At very least, it will be nice instructions in code.
-        # 3) Do we need to manually append the timeseries data?
+        # 3) Do we need to manually append the timeseries data? No. AM4 will just make another set of files. There are FRE-tools to append these.
         #
-        # TODO: Do we need to crack open a .res (coupler.res maybe?) file to read the current date? How do restarts work?
+        # create RESTART directory if necessary:
+        if not os.path.isdir(pth_restart ):
+            os.makedirs(pth_restart)
+        #
+        # queue restart:
+        # TODO: Should not actually need the len() evaluation, but os.path calls are being sensitive and twitchy...
+        if len(os.listdir(pth_restart)) > 0:
+            #
+            # automatically detect restart, but allow override.
+            if is_restart is None:
+                if verbose:
+                    print('*** DEBUG: restart detected')
+                is_restart = True
+            #    # shutil.move() appears to throw an error if the file already exists. we can handle that, or just use a subprocess...
+            #    shutil.move(os.path.join(pth_restart, filename), pth_input )
+            sp_out = subprocess.run('mv -f {}/* {}/'.format(pth_restart, pth_input), shell=True, check=True,capture_output=True, timeout=copy_timeout)
+        #
+        if verbose:
+            print('*** ABS_current_date: {}'.format(restart_date))
+            print('*** ABS variables:')
+            #
+            for key,val in ABS.__dict__.items():
+                print('{}: {}'.format(key,val))
         #
         my_configs = {'coupler_nml':{'days':runtime_days, 'months':runtime_months, 'current_date':ABS.get_restart_current_date()}, 'fv_core_nml':{'npx':npx, 'npy':npy, 'npz':npz}}
         if is_restart:
@@ -124,21 +149,7 @@ class Setup_and_run(object):
         #print('*** DEBUG: {}'.format(my_nml))
         print('*** DEBUG: nml created: {}'.format(nml_out))
         #
-        # just in case... there area  number of places where we can accidentally remove this path, which the Sim apparently cannot
-        #  create.
-        if not os.path.isdir(pth_restart ):
-            os.makedirs(pth_restart)
-        #
-        # queue restart:
-        # TODO: Should not actually need the len() evaluation, but os.path calls are being sensitive and twitchy...
-        if len(os.listdir(pth_restart)) > 0:
-            #for filename in os.listdir(pth_restart):
-            #    # TODO: thread this?
-            #    # NOTE: since this is a mv operation, it should be automagically recursive on all elements:
-            #    # this appears to throw an error if the file already exists. we can handle that, or just use a subprocess...
-            #    shutil.move(os.path.join(pth_restart, filename), pth_input )
-            sp_out = subprocess.run('mv -f {}/* {}/'.format(pth_restart, pth_input), shell=True, check=True,capture_output=True, timeout=copy_timeout)
-        #
+        # example: read a .nml file into an NML object:
         #my_nml = NML_from_nml('input_yoder_v101.nml')
         if verbose:
             print('** my_nml[fv_core_nml]:' )
