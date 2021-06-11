@@ -40,8 +40,14 @@ class Setup_and_run(object):
         if pth_input is None:
             pth_input = os.path.join(work_dir, 'INPUT')
         #
-        if batch_job_name is None:
+        # for batch_job_name, use none-line behavior:
+        #if batch_job_name is None:
+        #    batch_job_name = os.path.join(work_dir, 'AM4_batch_example.bs')
+        batch_job_name = batch_job_name or os.path.join(work_dir, 'AM4_batch_example.bs')
+        if os.path.split(batch_job_name)[0]=='' or len(os.path.split(batch_job_name))<2:
+            # NOTE: different versions of os.path.split() might handle a bare filenamem differently?
             batch_job_name = os.path.join(work_dir, 'AM4_batch_example.bs')
+        
         #
         # add slurm kwds:
         #for ky,vl in kwargs.items():
