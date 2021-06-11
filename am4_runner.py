@@ -36,9 +36,9 @@ class Setup_and_run(object):
         if input_data_path is None:
             input_data_path = os.path.join(default_work_root, 'AM4', 'AM4_data', 'AM4_run')
         if pth_restart is None:
-            pth_restart = os.path.join(default_work_root, 'RESTART')
+            pth_restart = os.path.join(work_dir, 'RESTART')
         if pth_input is None:
-            pth_input = os.path.join(default_work_root, 'INPUT')
+            pth_input = os.path.join(work_dir, 'INPUT')
         #
         if batch_job_name is None:
             batch_job_name = os.path.join(default_work_root, 'AM4_batch_example.bs')
@@ -73,8 +73,10 @@ class Setup_and_run(object):
         do_batch = AM4py.is_true(do_batch)
         is_restart = AM4py.is_true(is_restart)
         #
-        print('** ** ** ** DEBUG do_batch:: {}'.format(do_batch))
-        print('** ** ** ** DEBUG is_restart:: {}'.format(is_restart))
+        print(f'** ** ** ** DEBUG do_batch:: {do_batch}')
+        print(f'** ** ** ** DEBUG is_restart:: {is_restart}')
+        print(f'** ** ** ** DEBUG pth_restart: {pth_restart}')
+        print(f'** ** ** ** DEBUG pth_input: {pth_input}')
         verbose=int(verbose)
         #
         # This is nominally a fast, slick way to update default variables, but:
@@ -125,7 +127,8 @@ class Setup_and_run(object):
             #
             # automatically detect restart, but allow override.
             if is_restart is None:
-                if verbose:
+                # TODO: do a better job of detecting restart. What we really want to do is look for the restart files either in restart or having been moved to INPUT.
+                if verbose or True:
                     print('*** DEBUG: restart detected')
                 is_restart = True
             #    # shutil.move() appears to throw an error if the file already exists. we can handle that, or just use a subprocess...
