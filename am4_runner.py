@@ -41,7 +41,7 @@ class Setup_and_run(object):
             pth_input = os.path.join(work_dir, 'INPUT')
         #
         if batch_job_name is None:
-            batch_job_name = os.path.join(default_work_root, 'AM4_batch_example.bs')
+            batch_job_name = os.path.join(work_dir, 'AM4_batch_example.bs')
         #
         # add slurm kwds:
         #for ky,vl in kwargs.items():
