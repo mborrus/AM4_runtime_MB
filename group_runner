@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#SBATCH --array=3-4%1
+#SBATCH --array=1-3%1
 #SBATCH --output=./jobfiles/group_runner%A-%a.out
 #SBATCH --job-name=group_Am4
 #SBATCH --time=70:00:00
@@ -9,40 +9,36 @@
 
 echo "moving propper SST file into place"
 rm -rf /scratch/users/mborrus/AM4/AM4_run_editable/INPUT/hadisst_sst.data.nc
-cp /scratch/users/mborrus/AM4/extra_data/p4_SST.nc /scratch/users/mborrus/AM4/AM4_run_editable/INPUT/hadisst_sst.data.nc
-
-echo "moving to AM4 runtime folder"
-cd /scratch/users/mborrus/AM4/AM4_runtime_MB
+cp /scratch/users/mborrus/AM4/extra_data/p8_SST.nc /scratch/users/mborrus/AM4/AM4_run_editable/INPUT/hadisst_sst.data.nc
 
 echo "starting first run"
-srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run_editable work_dir=`cd ..;pwd`/SST_p4/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=${AM4_MODULE} hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=23:00:00 do_batch=True restart=False
+srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run_editable work_dir=`cd ..;pwd`/SST_p8/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=${AM4_MODULE} hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=23:00:00 do_batch=True restart=False
 echo "first run submitted"
 
 echo "moving propper SST file into place"
 rm -rf /scratch/users/mborrus/AM4/AM4_run_editable/INPUT/hadisst_sst.data.nc
-cp /scratch/users/mborrus/AM4/extra_data/m4_SST.nc /scratch/users/mborrus/AM4/AM4_run_editable/INPUT/hadisst_sst.data.nc
+cp /scratch/users/mborrus/AM4/extra_data/p12_SST.nc /scratch/users/mborrus/AM4/AM4_run_editable/INPUT/hadisst_sst.data.nc
 
 echo "starting second run"
-srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run_editable work_dir=`cd ..;pwd`/SST_m4/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=${AM4_MODULE} hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=23:00:00 do_batch=True restart=False
+srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run_editable work_dir=`cd ..;pwd`/SST_p12/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=${AM4_MODULE} hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=23:00:00 do_batch=True restart=False
+echo "second run submitted"
+
+echo "moving propper SST file into place"
+rm -rf /scratch/users/mborrus/AM4/AM4_run_editable/INPUT/hadisst_sst.data.nc
+cp /scratch/users/mborrus/AM4/extra_data/p16_SST.nc /scratch/users/mborrus/AM4/AM4_run_editable/INPUT/hadisst_sst.data.nc
+
+echo "starting second run"
+srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run_editable work_dir=`cd ..;pwd`/SST_p16/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=${AM4_MODULE} hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=23:00:00 do_batch=True restart=False
+echo "second run submitted"
+
+echo "moving propper SST file into place"
+rm -rf /scratch/users/mborrus/AM4/AM4_run_editable/INPUT/hadisst_sst.data.nc
+cp /scratch/users/mborrus/AM4/extra_data/p20_SST.nc /scratch/users/mborrus/AM4/AM4_run_editable/INPUT/hadisst_sst.data.nc
+
+echo "starting second run"
+srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run_editable work_dir=`cd ..;pwd`/SST_p20/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=3 runtime_days=10 modules=${AM4_MODULE} hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=23:00:00 do_batch=True restart=False
 echo "second run submitted"
 
 echo "  entering hibernation"
 sleep 12h
 echo "awoke from hibernation"
-#ml load netcdf
-
-#cd $SCRATCH/AM4/co2/${SLURM_ARRAY_TASK_ID}
-#mppnccombine -r 19790101.atmos_daily.tile1.nc
-#mppnccombine -r 19790101.atmos_daily.tile2.nc
-#mppnccombine -r 19790101.atmos_daily.tile3.nc
-#mppnccombine -r 19790101.atmos_daily.tile4.nc
-#mppnccombine -r 19790101.atmos_daily.tile5.nc
-#mppnccombine -r 19790101.atmos_daily.tile6.nc
-
-#cd $SCRATCH/AM4/quarter/${SLURM_ARRAY_TASK_ID}
-#mppnccombine -r 19790101.atmos_daily.tile1.nc
-#mppnccombine -r 19790101.atmos_daily.tile2.nc
-#mppnccombine -r 19790101.atmos_daily.tile3.nc
-#mppnccombine -r 19790101.atmos_daily.tile4.nc
-#mppnccombine -r 19790101.atmos_daily.tile5.nc
-#mppnccombine -r 19790101.atmos_daily.tile6.nc
