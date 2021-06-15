@@ -13,24 +13,24 @@ echo "run 1 started"
 srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/short_year nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=0 runtime_days=2 modules=${AM4_MODULE} hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=2:00:00 do_batch=True restart=False
 echo "run 1 finished"
 
-sleep 31h
+sleep 30m
 
 echo "run 2 started"
 srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/short_year nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=0 runtime_days=2 modules=${AM4_MODULE} hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=2:00:00 do_batch=True restart=True
 echo "run 2 finished"
-sleep 31h
+sleep 31m
 
 echo "run 3 started"
 srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/short_year nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=0 runtime_days=2 modules=${AM4_MODULE} hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=2:00:00 do_batch=True restart=True
 
 echo "run 3 finished"
-sleep 31h
+sleep 31m
 
 echo "run 4 started"
 srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/short_year nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=0 runtime_days=2 modules=${AM4_MODULE} hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=2:00:00 do_batch=True restart=True
 
 echo "run 4 finished"
-sleep 31h
+sleep 31m
 
 echo "run 5 started"
 srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/short_year nml_template=input_xanadu_2021.01.nml n_cpu_atmos=96 runtime_months=0 runtime_days=2 modules=${AM4_MODULE} hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=2:00:00 do_batch=True restart=True
