@@ -29,7 +29,6 @@ or, to allow CBASE or CPERF nodes, use `hpc_config=sherlock3_singularity`:
 
       srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4_run work_dir=`cd ..;pwd`/workdir nml_template=input_xanadu_2021.01.nml n_cpu_atmos=24 modules=${AM4_MODULE} hpc_config=sherlock3_singularity mpi_exec=srun am4_container_pathname=${AM4_CONTAINER_PATHNAME} am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=01:00:00 do_batch=False restart=None
 
-
 **NOTE:** The `hpc_config=` parameter can be a string equal to a key in the default internal `hpc_configs` dict, a `.json` filename, or a `dict`-like object.
       
   - Example 1: Restrict to Sherlock 3.0 CBASE nodes, Example 2: Restricted to Sherlock 3.0 CBASE xor CPERF nodes (all of one or the other, but no mixing).
