@@ -243,15 +243,16 @@ class AM4_batch_scripter(object):
     'unknown':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'unknown', 'cpu_gen':'unknown',
                   'mem_per_node':64}
     }
-    #
+
     def __init__(self, batch_out=None, work_dir=None, mpi_exec='mpirun',
                  input_data_path=None, input_data_tar=None, input_data_url=None,
                  nml_template='nml_input_template.nml', modules=None,
                 diag_table_src='diag_table_v101', field_table_src='field_table_v101', data_table_src='data_table_v101',
+                 coupler_res='coupler.res',
                  force_copy_input=0, do_tar=0, hpc_config='mazama_hpc',
                  npes_atmos=48, nthreads_atmos=1, npes_ocean=0,
                  job_name='AM4_run', current_date='1979,1,1,0,0,0',
-                 slurm_directives={}, mpi_debug=False,
+                 slurm_directives={}, nml_directives={}, mpi_debug=False,
                  container_exe='singularity', am4_container_pathname=None, am4_exe='am4.x',
                  copy_timeout=6000, verbose=0, **kwargs):
         # slurm_partition=None, slurm_time=None,
@@ -306,6 +307,11 @@ class AM4_batch_scripter(object):
         if isinstance(mpi_debug, str):
             mpi_debug = is_true(mpi_debug)
         #
+        # are container_exe orr am4_exe none-like?
+        if (container_exe or "invalid")=="invalid" or (am4_exe or "bogus")=="bogus":
+            raise Exception(f'EXCEPTION: container_exe={container_exe} or am4_exe={am4_exe} not valid. You may need to load an LMOD module.')
+            
+        #
         # slurm_directives:
         # SLURM directive may be passed in either via the slurm_directives parameter (we'll handle dict. or a string; might add
         #  handling for 1 and 2d lists/arrays as well)., or from **kwargs with keys that start with 'slrum_' .
@@ -319,6 +325,15 @@ class AM4_batch_scripter(object):
             if ky.startswith('slurm_'):
                 if verbose: print('** SLURM_DIRECTIVE: {}, {}'.format(ky,vl))
                 slurm_directives[ky[6:]]=vl
+            #
+            if ky.startswith('nml_'):
+                ky1,ky2 = ky[4:].split(':')
+                if verbose: print(f'** NML_DIRECTIVE kwarg: [{ky1}][{ky2}]={vl}')
+                #
+                if not ky1 in nml_directives.keys():
+                    nml_directives[ky1] = {}
+                nml_directives[ky1][ky2]=vl
+            
         #
         # add any slurm_directives from the hpc_config that are not overridden by inputs:
         for ky,vl in hpc_config['slurm_directives'].items():
@@ -423,6 +438,7 @@ class AM4_batch_scripter(object):
     def default_nml_reconfig(self):
         # TODO: check these. if we're actually using ocean... is ocean supposet to be n*x=npes_ocean?
         #.  npes_total???
+        # TODO: also, consider handling restart here (at least partially)?
 #         return {'coupler_nml':{'atmos_npes':self.npes_atmos, 'atmos_nthreads':self.nthreads_atmos,
 #                               'ocean_npes':self.npes_ocean},
 #                'fv_core_nml':{'layout':self.layout_2, 'io_layout':self.layout_io_2},
@@ -435,7 +451,7 @@ class AM4_batch_scripter(object):
         #  threads- or tasks-per-node, but nominally it does not belong in the general config anyway. So let's start by pulling
         #  it frm this default config.
         #  from coupler_nml: , 'ncores_per_node':self.hpc_config['cpus_per_node'
-        return {'coupler_nml':{'atmos_npes':self.npes_atmos, 'atmos_nthreads':self.nthreads_atmos,
+        nml_configs = {'coupler_nml':{'atmos_npes':self.npes_atmos, 'atmos_nthreads':self.nthreads_atmos,
                               'ocean_npes':self.npes_ocean,
                               'current_date':self.current_date},
                'fv_core_nml':{'layout':'{},{}'.format(*self.layout_2),
@@ -448,6 +464,14 @@ class AM4_batch_scripter(object):
                               'io_layout':'{},{}'.format(*self.layout_io_1)},
                 'atmos_model_nml':{'nxblocks':1, 'nyblocks':self.nthreads_atmos}
                }
+        for ky,vl in self.nml_directives.items():
+            print('*** *** *** KY,VL: ', ky,vl)
+            nml_configs[ky] = nml_configs.get(ky, {})
+            #
+            nml_configs[ky].update(vl)
+        #
+        print('*** NML_CONFIGS: {}'.format(nml_configs) )
+        return nml_configs
     #
     def get_empty_workdir(self, work_dir=None, diag_table_src=None, field_table_src=None, data_table_src=None,
             force_copy=0, verbose=None):
@@ -502,12 +526,67 @@ class AM4_batch_scripter(object):
                 shutil.copy(src, pth_dst)
                 if verbose:
                     print('*** VERBOSE: Created input file: {} from source: {}'.format(pth_dst, src))
+    @property
+    def sim_elapsed_time(self):
+        start, stop = self.get_sim_date_range(string_format=False)
+        #
+        return (stop-start).days
+    #
+    def get_sim_date_range(self, work_dir=None, coupler_res=None, string_format=True):
+        '''
+        # get simulation date range from coupler.res
+        '''
+        if work_dir is None:
+            work_dir = self.work_dir
+        coupler_res = coupler_res or self.coupler_res
+        #
+        # look for coupler_res in both INPUT and RESTART
+        default_restart_date = default_restart_date or self.current_date
+        #
+        # default value:
+        #restart_date = '1979,1,1,0,0,0'
+        # NOTE: for multiple restarts, coupler.res will exist in both RESTART
+        #  and INPUT; RESTART/coupler.res will... should have the more recent
+        #  date.
+        if os.path.isfile(os.path.join(work_dir, 'RESTART', 'coupler.res')):
+            coupler_path = os.path.join(work_dir, 'RESTART', 'coupler.res')
+        elif os.path.isfile(os.path.join(work_dir, 'INPUT', 'coupler.res')):
+            coupler_path = os.path.join(work_dir, 'INPUT', 'coupler.res')
+        else:
+            print('*** WARNING: coupler_path not available in RESTART or INPUT.  Using default value, {}'.format(default_restart_date))
+            #print('*** ERROR: No coupler_path. Use default value, {}'.format(default_current_date))
+            return default_restart_date
+        #
+        with open(coupler_path, 'r') as fin:
+            cal_type = fin.readline().split()[0]
+            for rw in fin:
+                if rw.startswith('\n'):
+                    continue
+                #
+                rws = rw.split()
+                #
+                #  these data are not well formatted for programmatic ingestion,
+                #  so this will look a little silly:
+                if '_'.join(rws[6:8]).lower() == 'model_start':
+                    start_date = ','.join(rw.split()[0:6])
+                if '_'.join(rws[6:8]).lower() == 'current_model':
+                    restart_date = ','.join(rw.split()[0:6])
+        if string_format:
+            return start_date, restart_date
+        else:
+            return dtm.datetime(*numpy.array(start_date.split(',')).astype(int)), dtm.datetime(*numpy.array(restart_date.split(',')).astype(int))
         
     def get_restart_current_date(self, work_dir=None, default_restart_date=None):
         '''
+        # TODO: depricate this; replace with get sim_date_range(); just keep the
+        #  last value.
+        #
         # get current_date value for restart from RESTART/coupler.res
         # TODO: allow better granualarity than just work_day? apply some logic to allow full path to coupler.res, but
-        #  smart enough to take just work_dir? ??
+        #
+        # NOTE: this works, because the restart date is the last date in the field,
+        #  but nominally... there are two dates, some calendar info, etc.
+        #  we'll need the first date (start date) to do scripted restart sequences.
         '''
         if work_dir is None:
             work_dir = self.work_dir
@@ -515,6 +594,9 @@ class AM4_batch_scripter(object):
         #
         # default value:
         #restart_date = '1979,1,1,0,0,0'
+        # NOTE: for multiple restarts, coupler.res will exist in both RESTART
+        #  and INPUT; RESTART/coupler.res will... should have the more recent
+        #  date.
         if os.path.isfile(os.path.join(work_dir, 'RESTART', 'coupler.res')):
             coupler_path = os.path.join(work_dir, 'RESTART', 'coupler.res')
         elif os.path.isfile(os.path.join(work_dir, 'INPUT', 'coupler.res')):
@@ -728,6 +810,7 @@ class AM4_batch_scripter(object):
         for ky,vl in kwargs:
             if ky.startswith('slurm_'):
                 slurm_directives[ky[6:]] = vl
+                
         #
         for key,alt in [('chdir', self.work_dir), ('output', 'AM4_out_%j.out'), ('error', 'AM4_error_%j.err'), ('job-name', self.job_name)]:
             slurm_directives[key]=slurm_directives.get(key, alt)

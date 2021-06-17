@@ -1,10 +1,10 @@
-
 import os
 import AM4py
 import subprocess
 import shutil
 import sys
 import datetime as dtm
+import json
 #
 '''
 A script/class to set up and batch-run AM4 scenarios. Note that the Python part should be platform independent (and so
@@ -21,6 +21,7 @@ class Setup_and_run(object):
         is_restart=None, verbose=True, do_batch=True, slurm_directives={}, **kwargs):
         '''
         # process input parameters; setup and run. Maybe separate the setup, stage, run phases?
+        # @nml_directives: additional/mods to NML. pass like {'section':{ky:val, ...}, ...}. Example: {'fms_nml':{'print_memory_usage':'.true.'}, 'fms_io_nml':{'max_files_r':101, 'max_files_w':101}} . We'll also try to allow a JSON file as input. For now, require the _nml extension. we can trap for that, but then we'll likely see a revision with nml sections not titled *_nml.
         '''
         print('** DEBUG locals(): {}'.format(locals()))
         #
@@ -148,6 +149,7 @@ class Setup_and_run(object):
             for key,val in ABS.__dict__.items():
                 print('{}: {}'.format(key,val))
         #
+        # note: these will override and nml_directives passed in as nml_{group}:{item}={value} kwargs.
         my_configs = {'coupler_nml':{'days':runtime_days, 'months':runtime_months, 'current_date':ABS.get_restart_current_date()}, 'fv_core_nml':{'npx':npx, 'npy':npy, 'npz':npz}}
         if is_restart:
             my_configs['fv_core_nml']['adjust_dry_mass'] = '.false.'
