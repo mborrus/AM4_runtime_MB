@@ -20,10 +20,12 @@ class Setup_and_run(object):
         n_days_total=60, runtime_days=1, runtime_months=0, npx=97, npy=97, npz=33,
         is_restart=None, verbose=True, do_batch=True, slurm_directives={}, **kwargs):
         '''
+        # TODO: consider revoking runtime_months= support. (I think) we ca
         # process input parameters; setup and run. Maybe separate the setup, stage, run phases?
         # @nml_directives: additional/mods to NML. pass like {'section':{ky:val, ...}, ...}. Example: {'fms_nml':{'print_memory_usage':'.true.'}, 'fms_io_nml':{'max_files_r':101, 'max_files_w':101}} . We'll also try to allow a JSON file as input. For now, require the _nml extension. we can trap for that, but then we'll likely see a revision with nml sections not titled *_nml.
         '''
         print('** DEBUG locals(): {}'.format(locals()))
+        input_prams = {ky:vl for ky,vl in locals().items() if not ky in ('self', '__class__')}
         #
         # default variable values; we'll reset any variables passed via **kwargs after
         #  default values are set:
@@ -64,8 +66,6 @@ class Setup_and_run(object):
         #
         n_cpu_atmos = int(n_cpu_atmos)
         copy_timeout = int(copy_timeout)
-        #nml_template='input_yoder_v101.nml'
-        ##restart_date_dtm = dtm.datetime(1979,1,1,0,0,0)
         #
         # TODO: How do we count days? We might need to specify the start and end dates, or start date and a total
         #  duration.. but we probably need to specify the start and end somehow.
@@ -77,28 +77,17 @@ class Setup_and_run(object):
         npy = int(npy)
         npz = int(npz)
         #
-        do_batch = AM4py.is_true(do_batch)
+        do_batch   = AM4py.is_true(do_batch)
         is_restart = AM4py.is_true(is_restart)
+        #
+        # save revised input values:
+        input_prams.update( {ky:vl for ky,vl in locals().items() if ky in input_prams.keys()} )
         #
         print(f'** ** ** ** DEBUG do_batch:: {do_batch}')
         print(f'** ** ** ** DEBUG is_restart:: {is_restart}')
         print(f'** ** ** ** DEBUG pth_restart: {pth_restart}')
         print(f'** ** ** ** DEBUG pth_input: {pth_input}')
         verbose=int(verbose)
-        #
-        # This is nominally a fast, slick way to update default variables, but:
-        # 1) it is unorgiving and generally harder to use (ie, a typ-o in a var name won't throw an error)
-        # 2) We have to go through the variables to handle type, and other things too, anyway, so we don't really save much.
-        #
-        # update with anything passed in kwargs
-        #self.__dict__.update(kwargs)
-        #
-        #####
-    #    output_log = os.path.join(work_dir, 'AM4py_job_{}.log'.format(job_name))
-    #    if not os.path.isfile(output_log):
-    #        with open(output_log, 'w') as fout:
-    #            fout.write('# AM4py script log\n#!job_name={}\n'.format(job_name))
-            #
         #
         # TODO: evaluate status of macro-job:
         #  how many days have we run? is it >= n_days_total? Evaluate current_date and/or elapsed time in
@@ -114,13 +103,14 @@ class Setup_and_run(object):
         #
         zz = ABS.get_input_data(verbose=True)
         #
-        restart_date = ABS.get_restart_current_date()
-        #restart_date_dtm = dtm.datetime(*(','.join(restart_date)) )
+        #restart_date = ABS.get_restart_current_date()
+        start_date, restart_date = ABS.get_sim_date_range()
+        sim_elapsed_time = ABS.sim_elapsed_time()
         #
         # manage RESTART:
         # 1) fetch current_date from coupler_nml (see my_configs below)
         # 2) move contents of RESTART into INPUT. RESTART should be empty.
-        #   TODO: move this functionality to the ABS object. maybe .queue_for_restart(), which will do this move and anything else we determine
+        #   TODO: move this functionality to the ABS object? maybe queue_for_restart(), which will do this move and anything else we determine
         #    to be necessary later. At very least, it will be nice instructions in code.
         # 3) Do we need to manually append the timeseries data? No. AM4 will just make another set of files. There are FRE-tools to append these.
         #
@@ -172,6 +162,10 @@ class Setup_and_run(object):
             print('** batch_out: ', ABS.batch_out)
         #
         ABS.write_batch_script()
+        #
+        # queue a restart?
+        # if the end time of this run < total_time, then add a call back to this script to
+        # queue a restart.
         #
         if do_batch:
             if verbose:
