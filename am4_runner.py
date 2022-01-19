@@ -103,9 +103,9 @@ class Setup_and_run(object):
         #
         zz = ABS.get_input_data(verbose=True)
         #
-        #restart_date = ABS.get_restart_current_date()
-        start_date, restart_date = ABS.get_sim_date_range()
-        sim_elapsed_time = ABS.sim_elapsed_time()
+        restart_date = ABS.get_restart_current_date()
+        #start_date, restart_date = ABS.get_sim_date_range()
+        #sim_elapsed_time = ABS.sim_elapsed_time()
         #
         # manage RESTART:
         # 1) fetch current_date from coupler_nml (see my_configs below)
