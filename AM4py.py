@@ -526,13 +526,13 @@ class AM4_batch_scripter(object):
                 shutil.copy(src, pth_dst)
                 if verbose:
                     print('*** VERBOSE: Created input file: {} from source: {}'.format(pth_dst, src))
-    @property
+    #
     def sim_elapsed_time(self):
         start, stop = self.get_sim_date_range(string_format=False)
         #
         return (stop-start).days
     #
-    def get_sim_date_range(self, work_dir=None, coupler_res=None, string_format=True):
+    def get_sim_date_range(self, work_dir=None, coupler_res=None, default_restart_date=None, string_format=True):
         '''
         # get simulation date range from coupler.res
         '''
@@ -888,31 +888,10 @@ class AM4_batch_scripter(object):
                 #                                                )
             else:
                 # There is a container:
-                # TODO: do we actually need tmp_script? turns out we don't need
-                #  to switch into the workdir -- ie, the output will be passed
-                #  through to the host machine, local directory.
                 #
-                # bit using temp script:
-                ########
-                #tmp_script =  os.path.join(self.work_dir, 'container_script_tmp.sh')
-                #with open(tmp_script, 'w') as fout_tmp:
-                #    fout_tmp.write('#!/bin/bash\n')
-                #    fout_tmp.write('# temporary exec script, to facilitate multi-command *singularity exec* calls.\n')
-                #    fout_tmp.write('cd /workdir\n')
-                #    fout_tmp.write('{}\n'.format(self.am4_exe))
-                ##
-                #os.chmod(tmp_script, 0o755)
-                #mpi_command = '{} {}{}  {} exec --bind {}:/workdir {} /workdir/{} '.format(mpi_exec['exec'], mpi_exec['ntasks'], self.n_tasks,
-                #            container_exe, self.work_dir, self.am4_container_pathname, os.path.split(tmp_script)[-1]
-                #            )
                 mpi_command = '{} {}{}  {} exec {} {}'.format(mpi_exec['exec'], mpi_exec['ntasks'], self.n_tasks,
                             container_exe, self.am4_container_pathname, self.am4_exe
                             )
-                # container_exe='singularity', am4_container_pathname=None, am4_exe='am4.x',
-#                mpi_command = '{} {}{}  {} exec --bind {}:/workdir {} cd /workdir;{}  '.format(mpi_exec['exec'], mpi_exec['ntasks'], self.n_tasks,
-#                            self.container_exe, self.work_dir, self.am4_container_pathname, self.am4_exe
-#                            )
-                
             #
             fout.write('echo "{}"\n'.format(mpi_command))
             fout.write('#\n#\n')
@@ -921,10 +900,14 @@ class AM4_batch_scripter(object):
             #fout.write('echo ${MPI_COMMAND}\n')
             #
             #fout.write('${MPI_COMMAND}\n\n')
+<<<<<<< HEAD
             
             fout.write('#\n')
             
             
+=======
+            #
+>>>>>>> ae72c55f0516292146601621a6484a4b8518383b
             # add an error-check:
             for ln in ['if [[ $? -ne 0 ]]; then', 'echo "ERROR: Run failed." 1>&2',
                        '"ERROR: Output from run in {}/fms.out ... or maybe in a log file" 1>&2'.format(self.work_dir),
