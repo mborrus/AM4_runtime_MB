@@ -900,14 +900,11 @@ class AM4_batch_scripter(object):
             #fout.write('echo ${MPI_COMMAND}\n')
             #
             #fout.write('${MPI_COMMAND}\n\n')
-<<<<<<< HEAD
             
             fout.write('#\n')
             
             
-=======
             #
->>>>>>> ae72c55f0516292146601621a6484a4b8518383b
             # add an error-check:
             for ln in ['if [[ $? -ne 0 ]]; then', 'echo "ERROR: Run failed." 1>&2',
                        '"ERROR: Output from run in {}/fms.out ... or maybe in a log file" 1>&2'.format(self.work_dir),
