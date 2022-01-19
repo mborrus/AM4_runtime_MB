@@ -233,11 +233,11 @@ class AM4_batch_scripter(object):
     'sherlock2_hpc2':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'intel', 'cpu_gen':'skylake',
                       'mem_per_node':384, 'slurm_constraint':'CPU_GEN:SKX'},
     'sherlock3_base':{'cpus_per_node':32, 'cpu_slots':1, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7502',
-                      'mem_per_node':256, 'slurm_constraint':'CLASS:SH3_CBASE', 'modules':['am4/singularity_gfdl/2021.1.0']},
+                      'mem_per_node':256, 'slurm_constraint':'CLASS:SH3_CBASE', 'modules':['am4-cees-beta/singularity_gfdl/2021.1.0']},
     'sherlock3_base_singularity':{'cpus_per_node':32, 'cpu_slots':1, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7502',
-                      'mem_per_node':256, 'slurm_directives':{'constraint':'CLASS:SH3_CBASE'}, 'modules':['am4/singularity_gfdl/2021.1.0']},
+                      'mem_per_node':256, 'slurm_directives':{'constraint':'CLASS:SH3_CBASE'}, 'modules':['am4-cees-beta/singularity_gfdl/2021.1.0']},
     'sherlock3_singularity':{'cpus_per_node':[32,128], 'cpu_slots':[1,2], 'cpu_make':'AMD', 'cpu_gen':['EPYC_7502''EPYC_7742'],
-                      'mem_per_node':[256,1024], 'slurm_directives':{'constraint':['CLASS:SH3_CBASE|CLASS:SH3_CPERF']}, 'modules':['am4/singularity_gfdl/2021.1.0']},
+                      'mem_per_node':[256,1024], 'slurm_directives':{'constraint':['CLASS:SH3_CBASE|CLASS:SH3_CPERF']}, 'modules':['am4-cees-beta/singularity_gfdl/2021.1.0']},
     'sherlock3_perf':{'cpus_per_node':128, 'cpu_slots':2, 'cpu_make':'AMD', 'cpu_gen':'EPYC_7742',
                       'mem_per_node':1024, 'slurm_constraint':'CLASS:SH3_CPERF'},
     'unknown':{'cpus_per_node':24, 'cpu_slots':2, 'cpu_make':'unknown', 'cpu_gen':'unknown',
@@ -842,7 +842,7 @@ class AM4_batch_scripter(object):
             #
             fout.write('#\n# sbatch script written by AM4py.py, {}\n#\n'.format(dtm.datetime.now()))
             #
-            # Module swill be platform dependent. We could handle this section with JSON
+            # Modules will be platform dependent. We could handle this section with JSON
             #. if we wanted to.
             fout.write('#\nmodule purge\n#\n')
             #
