@@ -1,0 +1,52 @@
+#!/bin/bash
+#
+#SBATCH --array=4-6%1
+#SBATCH --output=./jobfiles/group_runner%A-%a.out
+#SBATCH --job-name=group_Am4
+#SBATCH --time=50:00:00
+#SBATCH -p serc
+#SBATCH --verbose
+
+ml netcdf/4.4.1.1
+ml anaconda-cees-beta
+ml am4-cees-beta/singularity_gfdl/2021.1.0
+
+echo "starting p8 run"
+srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4/AM4_run work_dir=`cd ..;pwd`/SST_p8/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=24 runtime_months=0 runtime_days=100 modules=am4-cees-beta/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=/home/groups/s-ees/share/cees/software/amd_arch/am4_singularity/am4_2021.01-gcc10.sif am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=24:00:00 do_batch=False restart=False
+rm -rf /scratch/users/mborrus/AM4/SST_p8/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+cp /scratch/users/mborrus/AM4/AM4/SST_profiles/p8_QOBS.nc /scratch/users/mborrus/AM4/SST_p8/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+sbatch /scratch/users/mborrus/AM4/SST_p8/${SLURM_ARRAY_TASK_ID}/AM4_batch_example.bs
+
+echo "starting m8 run"
+srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4/AM4_run work_dir=`cd ..;pwd`/SST_m8/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=24 runtime_months=0 runtime_days=100 modules=am4-cees-beta/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=/home/groups/s-ees/share/cees/software/amd_arch/am4_singularity/am4_2021.01-gcc10.sif am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=24:00:00 do_batch=False restart=False
+rm -rf /scratch/users/mborrus/AM4/SST_m8/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+cp /scratch/users/mborrus/AM4/AM4/SST_profiles/m8_QOBS.nc /scratch/users/mborrus/AM4/SST_m8/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+sbatch /scratch/users/mborrus/AM4/SST_m8/${SLURM_ARRAY_TASK_ID}/AM4_batch_example.bs
+
+echo "starting p12 run"
+srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4/AM4_run work_dir=`cd ..;pwd`/SST_p12/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=24 runtime_months=0 runtime_days=100 modules=am4-cees-beta/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=/home/groups/s-ees/share/cees/software/amd_arch/am4_singularity/am4_2021.01-gcc10.sif am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=24:00:00 do_batch=False restart=False
+rm -rf /scratch/users/mborrus/AM4/SST_p12/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+cp /scratch/users/mborrus/AM4/AM4/SST_profiles/p12_QOBS.nc /scratch/users/mborrus/AM4/SST_p12/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+sbatch /scratch/users/mborrus/AM4/SST_p12/${SLURM_ARRAY_TASK_ID}/AM4_batch_example.bs
+
+echo "starting m12 run"
+srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4/AM4_run work_dir=`cd ..;pwd`/SST_m12/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=24 runtime_months=0 runtime_days=100 modules=am4-cees-beta/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=/home/groups/s-ees/share/cees/software/amd_arch/am4_singularity/am4_2021.01-gcc10.sif am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=24:00:00 do_batch=False restart=False
+rm -rf /scratch/users/mborrus/AM4/SST_m12/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+cp /scratch/users/mborrus/AM4/AM4/SST_profiles/m12_QOBS.nc /scratch/users/mborrus/AM4/SST_m12/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+sbatch /scratch/users/mborrus/AM4/SST_m12/${SLURM_ARRAY_TASK_ID}/AM4_batch_example.bs
+
+echo "starting p16 run"
+srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4/AM4_run work_dir=`cd ..;pwd`/SST_p16/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=24 runtime_months=0 runtime_days=100 modules=am4-cees-beta/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=/home/groups/s-ees/share/cees/software/amd_arch/am4_singularity/am4_2021.01-gcc10.sif am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=24:00:00 do_batch=False restart=False
+rm -rf /scratch/users/mborrus/AM4/SST_p16/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+cp /scratch/users/mborrus/AM4/AM4/SST_profiles/p16_QOBS.nc /scratch/users/mborrus/AM4/SST_p16/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+sbatch /scratch/users/mborrus/AM4/SST_p16/${SLURM_ARRAY_TASK_ID}/AM4_batch_example.bs
+
+echo "starting m16 run"
+srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4/AM4_run work_dir=`cd ..;pwd`/SST_m16/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=24 runtime_months=0 runtime_days=100 modules=am4-cees-beta/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=/home/groups/s-ees/share/cees/software/amd_arch/am4_singularity/am4_2021.01-gcc10.sif am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=24:00:00 do_batch=False restart=False
+rm -rf /scratch/users/mborrus/AM4/SST_m16/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+cp /scratch/users/mborrus/AM4/AM4/SST_profiles/m16_QOBS.nc /scratch/users/mborrus/AM4/SST_m16/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+sbatch /scratch/users/mborrus/AM4/SST_m16/${SLURM_ARRAY_TASK_ID}/AM4_batch_example.bs
+
+echo "  entering hibernation"
+sleep 8h
+echo "awoke from hibernation"
