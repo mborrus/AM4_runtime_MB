@@ -902,8 +902,18 @@ class AM4_batch_scripter(object):
             #fout.write('${MPI_COMMAND}\n\n')
             
             fout.write('#\n')
-            
-            
+            fout.write('module load netcdf/4.4.1.1\n')
+            fout.write('module load anaconda-cees-beta\n')
+            fout.write('#\n')
+            fout.write('mppnccombine -v -r 19790101.atmos_daily.tile1.nc\n')
+            fout.write('mppnccombine -v -r 19790101.atmos_daily.tile2.nc\n')
+            fout.write('mppnccombine -v -r 19790101.atmos_daily.tile3.nc\n')
+            fout.write('mppnccombine -v -r 19790101.atmos_daily.tile4.nc\n')
+            fout.write('mppnccombine -v -r 19790101.atmos_daily.tile5.nc\n')
+            fout.write('mppnccombine -v -r 19790101.atmos_daily.tile6.nc\n')
+            fout.write('#\n')
+            fout.write('fregrid --input_mosaic ./INPUT/C96_mosaic.nc --input_file 19790101.atmos_daily.nc --output_file dailyUTPS.nc --scalar_field ucomp,temp,precip,sphum --nthreads 6 --nlon 144 --nlat 90 --debug\n')
+            fout.write('#\n')
             #
             # add an error-check:
             for ln in ['if [[ $? -ne 0 ]]; then', 'echo "ERROR: Run failed." 1>&2',
