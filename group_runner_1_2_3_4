@@ -38,7 +38,7 @@ sbatch /scratch/users/mborrus/AM4/SST_p4/${SLURM_ARRAY_TASK_ID}/AM4_batch_exampl
 echo "starting m1 run"
 srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4/AM4_run work_dir=`cd ..;pwd`/SST_m1/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=24 runtime_months=0 runtime_days=100 modules=am4-cees-beta/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=/home/groups/s-ees/share/cees/software/amd_arch/am4_singularity/am4_2021.01-gcc10.sif am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=24:00:00 do_batch=False restart=False
 rm -rf /scratch/users/mborrus/AM4/SST_m1/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
-cp /scratch/users/mborrus/AM4/AM4/SST_profiles/p1_QOBS.nc /scratch/users/mborrus/AM4/SST_m1/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+cp /scratch/users/mborrus/AM4/AM4/SST_profiles/m1_QOBS.nc /scratch/users/mborrus/AM4/SST_m1/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
 sbatch /scratch/users/mborrus/AM4/SST_m1/${SLURM_ARRAY_TASK_ID}/AM4_batch_example.bs
 
 echo "starting m2 run"
@@ -56,7 +56,7 @@ sbatch /scratch/users/mborrus/AM4/SST_m3/${SLURM_ARRAY_TASK_ID}/AM4_batch_exampl
 echo "starting m4 run"
 srun --partition=serc --constraint=CLASS:SH3_CBASE python am4_runner.py input_data_path=`cd ..;pwd`/AM4/AM4_run work_dir=`cd ..;pwd`/SST_m4/${SLURM_ARRAY_TASK_ID} nml_template=input_xanadu_2021.01.nml n_cpu_atmos=24 runtime_months=0 runtime_days=100 modules=am4-cees-beta/singularity_gfdl/2021.1.0 hpc_config=sherlock3_base_singularity mpi_exec=srun am4_container_pathname=/home/groups/s-ees/share/cees/software/amd_arch/am4_singularity/am4_2021.01-gcc10.sif am4_exe=${AM4_GFDL_EXE} slurm_partition=serc slurm_time=24:00:00 do_batch=False restart=False
 rm -rf /scratch/users/mborrus/AM4/SST_m4/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
-cp /scratch/users/mborrus/AM4/AM4/SST_profiles/m4_QOBS.nc /scratch/users/mborrus/AM4/SST_p4/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
+cp /scratch/users/mborrus/AM4/AM4/SST_profiles/m4_QOBS.nc /scratch/users/mborrus/AM4/SST_m4/${SLURM_ARRAY_TASK_ID}/INPUT/hadisst_sst.data.nc
 sbatch /scratch/users/mborrus/AM4/SST_m4/${SLURM_ARRAY_TASK_ID}/AM4_batch_example.bs
 
 echo "  entering hibernation"
