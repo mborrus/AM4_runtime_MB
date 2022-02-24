@@ -7,6 +7,8 @@ c96L33_am4p0
 # atmos_daily
 # ###########
 "moist",     "precip",                         "precip",           "atmos_daily",     "all", .true.,  "none", 2
+"moist",     "prec_ls",                        "prec_ls",          "atmos_daily",     "all", .true.,  "none", 2
+"moist",     "prec_conv",                      "prec_conv",        "atmos_daily",     "all", .true.,  "none", 2
 "dynamics",  "temp",                           "temp",             "atmos_daily",     "all", .true.,  "none", 2
 "dynamics",  "ucomp",                          "ucomp",            "atmos_daily",     "all", .true.,  "none", 2
 "dynamics",  "vcomp",                          "vcomp",            "atmos_daily",     "all", .true.,  "none", 2
